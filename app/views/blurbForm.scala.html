@@ -1,0 +1,14 @@
+@(id: String, blurbForm: Form[Blurb], isNew: Boolean = true)
+
+@import helper._
+@import helper.twitterBootstrap._
+
+@main(s"${if(isNew) "Create" else "Edit"} Blurb") {
+<h1>@{if(isNew) "Create" else "Edit"} Blurb</h1>
+@form(action = routes.Blurbs.update(id)) {
+    @inputText(blurbForm("question"), '_label -> "Question", 'class -> "span8")
+    @inputText(blurbForm("Answer"), '_label -> "Answer", 'class -> "span8")
+    <a href="@routes.Blurbs.list()" class="btn">Cancel</a>
+    <input type="submit" class="btn btn-primary" value="@{if(isNew) "Create" else "Update"}">
+}
+}
