@@ -13,3 +13,27 @@
 .navbar .brand {
     color: #1e90ff;
 }
+
+.facet-view-simple .btn-group {
+    vertical-align: top;
+}
+
+.pagination ul>li>a:hover, .pagination ul>li>a:focus, .pagination ul>.active>a, .pagination ul>.active>span {
+    background-color: rgba(100,100,100,0.1);
+}
+
+blockquote {
+    font-style: italic;
+    margin: 5px 0 0;
+}
+
+blockquote em {
+    color: darkorange;
+}
+
+hr {
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #333;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}

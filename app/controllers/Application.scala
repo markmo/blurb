@@ -4,12 +4,14 @@ import play.api.mvc._
 
 object Application extends Controller with securesocial.core.SecureSocial {
 
-  def index = SecuredAction { implicit request =>
-    Ok(views.html.index("hello"))
+  val Home = Redirect(routes.Blurbs.index())
+
+  def index = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+    Home
   }
 
-  def search = Action {
-    Ok(views.html.facetview())
+  def search = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+    Ok(views.html.facetview(request.user))
   }
 
 }

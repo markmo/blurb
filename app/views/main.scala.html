@@ -1,4 +1,4 @@
-@(title: String, scripts: Html = null)(content: Html)
+@(title: String, user: securesocial.core.Identity, scripts: Html = null)(content: Html)
 
 <!DOCTYPE html>
 
@@ -28,6 +28,16 @@
                 <div class="navbar-inner">
                     <div class="container">
                         <a class="brand" href="@routes.Blurbs.index">Blurb</a>
+                        <div id="user-control" class="btn-group pull-right">
+                            <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+                                <i class="icon-user"></i> @user.firstName @user.lastName
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="@securesocial.controllers.routes.LoginPage.logout()"><i class="icon-off icon-white"></i>
+                                Logout</a></li>
+                            </ul>
+                        </div>
                         <ul class="nav">
                             <li><a href="@routes.Blurbs.index">Browse</a></li>
                             <li><a href="@routes.Application.search">Search</a></li>

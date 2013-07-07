@@ -37,8 +37,8 @@
     border-radius: 5px;
 }
 .facetview_rangecontainer{
-    border:1px solid #ccc; 
-    padding:5px; 
+    border:1px solid #ccc;
+    padding:5px;
     margin-bottom:5px;
     -moz-border-radius: 5px;
     -webkit-border-radius: 5px;
@@ -49,7 +49,7 @@
 }
 .facetview_filterchoice{
     text-decoration:none;
-    color:#373737;
+    color:#999;
 }
 .facetview_filterselected{
 }

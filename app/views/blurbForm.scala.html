@@ -1,4 +1,4 @@
-@(id: String, blurbForm: Form[Blurb], tags: List[String], isNew: Boolean = true)
+@(id: String, blurbForm: Form[Blurb], tags: List[String], isNew: Boolean = true, user: securesocial.core.Identity)
 
 @import helper._
 @import helper.twitterBootstrap._
@@ -12,6 +12,7 @@
             container: 'answer-editor',
             textarea: 'answer',
             basePath: '/assets/javascripts/epiceditor',
+            clientSideStorage: false,
             theme: {
                 base: '/themes/base/epiceditor.css',
                 editor: '/themes/editor/epic-dark.css',
@@ -23,7 +24,7 @@
 </script>
 }
 
-@main(s"${if(isNew) "Create" else "Edit"} Blurb", scripts) {
+@main(s"${if(isNew) "Create" else "Edit"} Blurb", user, scripts) {
 <h1>@{if(isNew) "Create" else "Edit"} Blurb</h1>
 @form(action = routes.Blurbs.update) {
     @defining(blurbForm("_id")) { field =>
@@ -33,6 +34,10 @@
     @input(blurbForm("answer"), '_label -> "Answer", 'class -> "span8 editor") { (id, name, value, args) =>
     <div class="clearfix">
         <div id="answer-editor" @toHtmlArgs(args)></div>
+    </div>
+    <div style="margin-top: 6px;">
+        Use <a href="http://daringfireball.net/projects/markdown/syntax">Markdown</a>
+        as a minimal format to avoid conflict with existing stylesheets.
     </div>
     <textarea id="@id" name="@name" style="display: none;">@value</textarea>
     }

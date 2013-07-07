@@ -1,3 +1,5 @@
+@(user: securesocial.core.Identity)
+
 @scripts = {
 <script>
     $(function () {
@@ -6,7 +8,7 @@
                 {
                     pre: '<a href="/blurbs/',
                     field: '_id',
-                    post: '/edit">'
+                    post: '/edit" style="margin-right: 6px;">'
                 },
                 {
                     field: 'question',
@@ -15,14 +17,14 @@
             ],
             [
                 {
-                    pre: '<blockquote><small style="margin-right: 6px;">',
+                    pre: '<blockquote>',
                     field: '_highlights',
-                    post: '</small></blockquote>'
+                    post: '</blockquote>'
                 },
                 {
                     pre: '<a href="#" data-toggle="collapse" data-target="#',
                     field: '_id',
-                    post: '"><i class="icon-chevron-down"></i>&hellip;</a>'
+                    post: '">&hellip;</a>'
                 }
             ],
             [
@@ -44,7 +46,7 @@
             ]
         ];
         $('.facet-view-simple').facetview({
-            search_url: 'http://localhost:9200/play2-elasticsearch/_search?',
+            search_url: 'http://localhost:9200/blurb/_search?',
             search_index: 'blurb',
             result_display: resultTemplate,
             pushstate: false,
@@ -57,7 +59,7 @@
 </script>
 }
 
-@main("Search", scripts) {
+@main("Search", user, scripts) {
 <h1>Search</h1>
 <div class="facet-view-simple"></div>
 }
