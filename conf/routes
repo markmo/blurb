@@ -5,11 +5,12 @@
 # Home page
 GET     /                           controllers.Application.index
 
+GET     /search                     controllers.Application.search
+
 GET     /blurbs/new                 controllers.Blurbs.create
 GET     /blurbs/:id/edit            controllers.Blurbs.edit(id: String)
-GET     /blurbs                     controllers.Blurbs.list
-POST    /blurbs/new                 controllers.Blurbs.new
-POST    /blurbs/:id                 controllers.Blurbs.update(id: String)
+GET     /blurbs                     controllers.Blurbs.index
+POST    /blurbs                     controllers.Blurbs.update
 
 # Login page
 GET     /login                      securesocial.controllers.LoginPage.login

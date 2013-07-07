@@ -1,4 +1,4 @@
-@(title: String)(content: Html)
+@(title: String, scripts: Html = null)(content: Html)
 
 <!DOCTYPE html>
 
@@ -8,14 +8,36 @@
         <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/bootstrap.min.css")">
         <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/jquery-ui-1.8.18.custom.css")">
         <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/facetview.css")">
+        <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/select2.css")">
         <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
         <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
         <script src="@routes.Assets.at("javascripts/jquery-1.9.0.min.js")" type="text/javascript"></script>
         <script src="@routes.Assets.at("javascripts/bootstrap.min.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.at("javascripts/linkify/1.0/jquery.linkify-1.0-min.js")" type="text/javascript"></script>
         <script src="@routes.Assets.at("javascripts/jquery-ui-1.8.18.custom.min.js")" type="text/javascript"></script>
         <script src="@routes.Assets.at("javascripts/jquery.facetview.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.at("javascripts/select2.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.at("javascripts/epiceditor/js/epiceditor.min.js")" type="text/javascript"></script>
+        @if(scripts != null) {
+            @scripts
+        }
     </head>
     <body>
-        @content
+        <div class="container">
+            <div class="navbar navbar-fixed-top">
+                <div class="navbar-inner">
+                    <div class="container">
+                        <a class="brand" href="@routes.Blurbs.index">Blurb</a>
+                        <ul class="nav">
+                            <li><a href="@routes.Blurbs.index">Browse</a></li>
+                            <li><a href="@routes.Application.search">Search</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="content">
+            @content
+            </div>
+        </div>
     </body>
 </html>

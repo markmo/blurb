@@ -8,4 +8,8 @@ object Application extends Controller with securesocial.core.SecureSocial {
     Ok(views.html.index("hello"))
   }
 
+  def search = Action {
+    Ok(views.html.facetview())
+  }
+
 }

@@ -5,13 +5,24 @@
 <div class="add-button">
     <a href="@routes.Blurbs.create" class="btn btn-small btn-success">
         <i class="icon-plus icon-white"></i>
-        <span>New blurb&hellip;</span>
+        <span>New Blurb&hellip;</span>
     </a>
 </div>
 <dl>
     @for(blurb <- blurbs) {
-    <dt>@blurb.question</dt>
-    <dd>@blurb.answer</dd>
+    <dt>
+        <a href="@routes.Blurbs.edit(blurb._id.toString)">@blurb.question</a>
+    </dt>
+    <dd>
+        <p>@blurb.answer</p>
+        @if(blurb.tags != null) {
+        <p>
+            @for(tag <- blurb.tags) {
+            <span class="label">@tag</span>
+            }
+        </p>
+        }
+    </dd>
     }
 </dl>
 }

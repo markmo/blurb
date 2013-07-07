@@ -1,0 +1,63 @@
+@scripts = {
+<script>
+    $(function () {
+        var resultTemplate = [
+            [
+                {
+                    pre: '<a href="/blurbs/',
+                    field: '_id',
+                    post: '/edit">'
+                },
+                {
+                    field: 'question',
+                    post: '</a>'
+                }
+            ],
+            [
+                {
+                    pre: '<blockquote><small style="margin-right: 6px;">',
+                    field: '_highlights',
+                    post: '</small></blockquote>'
+                },
+                {
+                    pre: '<a href="#" data-toggle="collapse" data-target="#',
+                    field: '_id',
+                    post: '"><i class="icon-chevron-down"></i>&hellip;</a>'
+                }
+            ],
+            [
+                {
+                    pre: '<div class="collapse" id="',
+                    field: '_id',
+                    post: '"><hr>'
+                },
+                {
+                    pre: '<span>',
+                    field: 'answer',
+                    post: '</span>'
+                },
+                {
+                    pre: '</div><!-- end collapsible #',
+                    field: '_id',
+                    post: ' -->'
+                }
+            ]
+        ];
+        $('.facet-view-simple').facetview({
+            search_url: 'http://localhost:9200/play2-elasticsearch/_search?',
+            search_index: 'blurb',
+            result_display: resultTemplate,
+            pushstate: false,
+            facets: [
+                {field: 'tags'}
+            ],
+            paging: {size: 10}
+        });
+    });
+</script>
+}
+
+@main("Search", scripts) {
+<h1>Search</h1>
+<div class="facet-view-simple"></div>
+}

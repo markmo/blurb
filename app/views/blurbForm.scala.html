@@ -1,14 +1,45 @@
-@(id: String, blurbForm: Form[Blurb], isNew: Boolean = true)
+@(id: String, blurbForm: Form[Blurb], tags: List[String], isNew: Boolean = true)
 
 @import helper._
 @import helper.twitterBootstrap._
+@import tags._
 
-@main(s"${if(isNew) "Create" else "Edit"} Blurb") {
+@scripts = {
+<script>
+    $(function () {
+        $('#tags').select2({tags: [@Html(tags.map(tag => s"'$tag'").mkString(","))], tokenSeparators: [',', ' ']});
+        var editor = new EpicEditor({
+            container: 'answer-editor',
+            textarea: 'answer',
+            basePath: '/assets/javascripts/epiceditor',
+            theme: {
+                base: '/themes/base/epiceditor.css',
+                editor: '/themes/editor/epic-dark.css',
+                preview: '/themes/preview/preview-dark.css'
+            }
+        });
+        editor.load();
+    });
+</script>
+}
+
+@main(s"${if(isNew) "Create" else "Edit"} Blurb", scripts) {
 <h1>@{if(isNew) "Create" else "Edit"} Blurb</h1>
-@form(action = routes.Blurbs.update(id)) {
-    @inputText(blurbForm("question"), '_label -> "Question", 'class -> "span8")
-    @inputText(blurbForm("Answer"), '_label -> "Answer", 'class -> "span8")
-    <a href="@routes.Blurbs.list()" class="btn">Cancel</a>
+@form(action = routes.Blurbs.update) {
+    @defining(blurbForm("_id")) { field =>
+    <input name="@field.name" type="hidden" value="@field.value">
+    }
+    @textarea(blurbForm("question"), '_label -> "Question", 'class -> "span8")
+    @input(blurbForm("answer"), '_label -> "Answer", 'class -> "span8 editor") { (id, name, value, args) =>
+    <div class="clearfix">
+        <div id="answer-editor" @toHtmlArgs(args)></div>
+    </div>
+    <textarea id="@id" name="@name" style="display: none;">@value</textarea>
+    }
+    @inputText(blurbForm("tags"), 'id -> "tags", '_label -> "Tags", 'placeholder -> "Type to select or enter a new tag", 'class -> "span5")
+    @*multiSelect(blurbForm("tags"), options(Blurb.tagOptions), 'id -> "tags", '_label -> "Tags", 'placeholder -> "Type to select or enter a new tag", 'class -> "span5")*@
+    <br>
+    <a href="@routes.Blurbs.index()" class="btn">Cancel</a>
     <input type="submit" class="btn btn-primary" value="@{if(isNew) "Create" else "Update"}">
 }
 }
