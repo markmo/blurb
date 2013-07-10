@@ -13,7 +13,6 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson._
 import securesocial.core.{AuthenticationMethod, Identity, SocialUser, UserId}
-import scala.Some
 
 /**
  * Created by markmo on 5/07/13.
@@ -26,7 +25,8 @@ import scala.Some
       "answer: {type: \"string\"}," +
       "tags: {type: \"string\", index_name: \"tag\"}" +
     "}}")
-case class Blurb(key: Option[ObjectId],//id: Option[BSONObjectID],
+case class Blurb(key: Option[ObjectId],
+                 //id: Option[BSONObjectID],
                  question: String,
                  answer: String,
                  tags: Array[String],
@@ -36,6 +36,7 @@ case class Blurb(key: Option[ObjectId],//id: Option[BSONObjectID],
                  lastModifiedDate: Option[DateTime]) extends Indexable {
 
   def id = key.map(_.toString).getOrElse("")
+
 }
 
 object Blurb extends IndexableManager[Blurb] {
@@ -243,7 +244,7 @@ object Blurb extends IndexableManager[Blurb] {
          lastModifiedBy, lastModifiedDate) =>
       Blurb(
         id.map(new ObjectId(_)),
-//        id.map(new BSONObjectID(_)),
+        //id.map(new BSONObjectID(_)),
         question,
         answer,
         tags,
@@ -256,7 +257,7 @@ object Blurb extends IndexableManager[Blurb] {
       Some(
         (
           blurb.key.map(_.toString),
-//          blurb.id.map(_.stringify),
+          //blurb.id.map(_.stringify),
           blurb.question,
           blurb.answer,
           blurb.tags,
@@ -276,7 +277,7 @@ object Blurb extends IndexableManager[Blurb] {
 //           filter: String = "*") =
 //    Repository.pageBlurbs(page, pageSize, orderBy, orderDirection, filter)
 
-  //def tagOptions = Repository.getTags.map(tag => (tag, tag)).toMap
+//  def tagOptions = Repository.getTags.map(tag => (tag, tag)).toMap
 
 }
 

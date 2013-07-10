@@ -68,9 +68,10 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
   def edit(id: String) = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
     Async {
       val objectId = new ObjectId(id)
-//      val objectId = new BSONObjectID(id)
       val futureBlurb = collection.find(Json.obj("_id" -> objectId)).one[Blurb]
-//      val futureBlurb = collection.find(BSONDocument("_id" -> objectId)).one[Blurb]
+      //val objectId = new BSONObjectID(id)
+      //val futureBlurb = collection.find(BSONDocument("_id" -> objectId)).one[Blurb]
+
       // using for-comprehensions to compose futures
       // (see http://doc.akka.io/docs/akka/2.0.3/scala/futures.html#For_Comprehensions for more information)
       for {
@@ -97,13 +98,12 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
               lastModifiedBy = Some(user),
               lastModifiedDate = Some(DateTime.now())
             )
-            Blurb.index(newBlurb)
             collection.insert(newBlurb)
           }
           case Some(id) =>
             // Update
             collection.find(Json.obj("_id" -> id)).one[Blurb] map { result =>
-//            collection.find(BSONDocument("_id" -> id)).one[Blurb] map { result =>
+            //collection.find(BSONDocument("_id" -> id)).one[Blurb] map { result =>
               result match {
                 case Some(oldBlurb) => {
                   val newBlurb = boundBlurb.copy(
@@ -118,7 +118,10 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
               }
             }
         }
-        futureResult.map(_ => Application.Home)
+        futureResult.map(result => {
+//          Blurb.index(result)
+          Application.Home
+        })
       }
     )
   }
