@@ -14,7 +14,9 @@ object ApplicationBuild extends Build {
     "securesocial" %% "securesocial" % "master-SNAPSHOT",
     "com.clever-age" % "play2-elasticsearch" % "0.5.4",
     "uk.co.panaxiom" %% "play-jongo" % "0.4",
-    "com.typesafe.slick" %% "slick" % "1.0.1"
+    //"com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.2.1",
+    "org.reactivemongo" %% "play2-reactivemongo" % "0.9"
+    //"com.typesafe.slick" %% "slick" % "1.0.1"
   )
 
   val main = play.Project(appName, appVersion, appDependencies).settings(

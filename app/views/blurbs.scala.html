@@ -1,28 +1,65 @@
-@(blurbs: Seq[Blurb], user: securesocial.core.Identity)
+@(currentPage: Page[Blurb], currentOrderBy: String, currentOrderDirection: Int, currentFilter: String, user: securesocial.core.Identity)
+
+@link(newPage: Int, newOrderBy: Option[String] = None) = @{
+  val orderDirection = if(newOrderBy == currentOrderBy) -currentOrderDirection else 1
+  routes.Blurbs.index(newPage, newOrderBy.getOrElse(currentOrderBy), orderDirection, currentFilter)
+}
 
 @main("Blurbs", user) {
-<h1>Blurbs</h1>
-<div class="add-button">
-    <a href="@routes.Blurbs.create" class="btn btn-small btn-success">
-        <i class="icon-plus icon-white"></i>
-        <span>New Blurb&hellip;</span>
-    </a>
-</div>
-<dl>
-    @for(blurb <- blurbs) {
-    <dt>
-        <a href="@routes.Blurbs.edit(blurb._id.toString)">@blurb.question</a>
-    </dt>
-    <dd>
-        <p>@blurb.answer</p>
-        @if(blurb.tags != null) {
-        <p>
-            @for(tag <- blurb.tags) {
-            <span class="label">@tag</span>
+    <h1>Blurbs</h1>
+    <div class="add-button">
+        <a href="@routes.Blurbs.create" class="btn btn-small btn-success">
+            <i class="icon-plus icon-white"></i>
+            <span>New Blurb&hellip;</span>
+        </a>
+    </div>
+    @Option(currentPage.items).filterNot(_.isEmpty).map { blurbs =>
+        <dl>
+            @for(blurb <- blurbs) {
+            <dt>
+                <a href="@routes.Blurbs.edit(blurb.id)">@blurb.question</a>
+                @*<a href="@routes.Blurbs.edit(blurb.key.get.stringify)">@blurb.question</a>*@
+            </dt>
+            <dd>
+                <p>@blurb.answer</p>
+                @if(blurb.tags != null) {
+                <p>
+                    @for(tag <- blurb.tags) {
+                    <span class="label">@tag</span>
+                    }
+                </p>
+                }
+            </dd>
             }
-        </p>
-        }
-    </dd>
+        </dl>
+        <div id="pagination" class="pagination">
+            <ul>
+                @currentPage.prev.map { page =>
+                <li class="prev">
+                    <a href="@link(page)">&laquo; Previous</a>
+                </li>
+                }.getOrElse {
+                <li class="prev disabled">
+                    <a>&laquo; Previous</a>
+                </li>
+                }
+                <li class="current">
+                    <a>Displaying @(currentPage.offset + 1) to @(currentPage.offset + blurbs.size) of @currentPage.total</a>
+                </li>
+                @currentPage.next.map { page =>
+                <li class="next">
+                    <a href="@link(page)">Next &raquo;</a>
+                </li>
+                }.getOrElse {
+                <li class="next disabled">
+                    <a>Next &raquo;</a>
+                </li>
+                }
+            </ul>
+        </div>
+    }.getOrElse {
+        <div class="well">
+            <em>No items found</em>
+        </div>
     }
-</dl>
 }

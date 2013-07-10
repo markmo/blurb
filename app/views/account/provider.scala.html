@@ -12,7 +12,7 @@
 @Registry.providers.get(providerId).map { provider =>
             @if( provider.authMethod == OAuth1 || provider.authMethod == OAuth2 ) {
                 @if(provider.id == "google") {
-                    <a href="@provider.authenticationUrl"> <img src="@RoutesHelper.at("images/shine_login.png")"/></a>
+                    <a href="@provider.authenticationUrl"> <img src="@RoutesHelper.at("images/shine_logo_black.png")"/></a>
                 } else {
                     @defining( "securesocial/images/providers/%s.png".format(provider.id) ) { imageUrl =>
                         <a href="@provider.authenticationUrl"> <img src="@RoutesHelper.at(imageUrl)"/></a>

@@ -1,4 +1,4 @@
-@(id: String, blurbForm: Form[Blurb], tags: List[String], isNew: Boolean = true, user: securesocial.core.Identity)
+@(id: String, blurbForm: Form[_], tags: List[String], isNew: Boolean = true, user: securesocial.core.Identity)
 
 @import helper._
 @import helper.twitterBootstrap._
@@ -27,7 +27,7 @@
 @main(s"${if(isNew) "Create" else "Edit"} Blurb", user, scripts) {
 <h1>@{if(isNew) "Create" else "Edit"} Blurb</h1>
 @form(action = routes.Blurbs.update) {
-    @defining(blurbForm("_id")) { field =>
+    @defining(blurbForm("id")) { field =>
     <input name="@field.name" type="hidden" value="@field.value">
     }
     @textarea(blurbForm("question"), '_label -> "Question", 'class -> "span8")

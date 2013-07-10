@@ -1,0 +1,55 @@
+case class Blurb @JsonCreator()(@JsonProperty("_id") _id: ObjectId,
+                                @JsonProperty("question") question: String,
+                                @JsonProperty("answer") answer: String,
+                                @JsonProperty("tags") tags: Array[String],
+                                @JsonProperty("createdBy") createdBy: Identity,
+                                @JsonProperty("createdDate") createdDate: DateTime,
+                                @JsonProperty("lastModifiedBy") lastModifiedBy: Identity,
+                                @JsonProperty("lastModifiedDate") lastModifiedDate: DateTime) extends Indexable {
+
+  def id = _id.toString
+}
+
+object Blurb {
+
+  implicit object dateTimeStringFormat extends Format[DateTime] {
+
+    def reads(json: JsValue) = json match {
+      case jsString: JsString =>
+        JsSuccess(
+          DateTime.parse(jsString.value, ISODateTimeFormat.dateTime())
+        )
+      case other =>
+        JsError("Can't parse JSON path as a DateTime. JSON content = " +
+          other.toString())
+    }
+
+    def writes(dt: DateTime) =
+      JsString(dt.toString(ISODateTimeFormat.dateTime()))
+
+  }
+
+  implicit val blurbFormat = (
+    (__ \ "_id").format[Option[BSONObjectID]] and
+    (__ \ "question").format[String] and
+    (__ \ "answer").format[String] and
+    (__ \ "tags").format[Array[String]] and
+    (__ \ "createdBy").format[Identity] and
+    (__ \ "createdDate").format[DateTime] and
+    (__ \ "lastModifiedBy").format[Identity] and
+    (__ \ "lastModifiedDate").format[DateTime]
+    )(Blurb.apply, unlift(Blurb.unapply))
+
+}
+
+val modifier = BSONDocument(
+  "$set" -> BSONDocument(
+    "question" -> BSONString(q),
+    "answer" -> BSONString(a),
+    "tags" -> BSONArray(tags.map(tag => BSONString(tag)).toTraversable)
+    "lastModifiedBy" -> user,
+    "lastModifiedDate" -> DateTime.now()
+  )
+)
+val objectId = new BSONObjectID(oid.toString)
+collection.update(BSONDocument("_id" -> objectId), modifier)

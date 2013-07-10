@@ -1,3 +1,4 @@
+400:play.modules.reactivemongo.ReactiveMongoPlugin
 9000:com.github.cleverage.elasticsearch.plugin.IndexPlugin
 9994:securesocial.core.DefaultAuthenticatorStore
 9995:securesocial.core.DefaultIdGenerator

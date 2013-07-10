@@ -9,7 +9,7 @@ GET     /search                     controllers.Application.search
 
 GET     /blurbs/new                 controllers.Blurbs.create
 GET     /blurbs/:id/edit            controllers.Blurbs.edit(id: String)
-GET     /blurbs                     controllers.Blurbs.index
+GET     /blurbs                     controllers.Blurbs.index(p: Int ?= 0, s: String ?= "lastModifiedDate", d: Int ?= -1, f: String ?= ".*")
 POST    /blurbs                     controllers.Blurbs.update
 
 # Login page
