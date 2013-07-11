@@ -7,7 +7,7 @@
 @scripts = {
 <script>
     $(function () {
-        $('#tags').select2({tags: [@Html(tags.map(tag => s"'$tag'").mkString(","))], tokenSeparators: [',', ' ']});
+        $('#tags').select2({tags: [@Html(tags.map(tag => s"'$tag'").mkString(","))]});@*, tokenSeparators: [',', ' ']});*@
         var editor = new EpicEditor({
             container: 'answer-editor',
             textarea: 'answer',

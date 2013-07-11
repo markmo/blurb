@@ -17,19 +17,19 @@ import securesocial.core._
 /**
  * Created by markmo on 5/07/13.
  */
-@IndexMapping(value =
-  "{columns: {" +
-    "properties: {" +
-      "question: {type: \"string\"}," +
-      "answer: {type: \"string\"}," +
-      "tags: {type: \"string\", index_name: \"tag\", index: \"not_analyzed\"}," +
-      "author: {type: \"string\", index: \"not_analyzed\"}," +
-      "createdDate: {type: \"date\"}" +
-      "createdYearMonth: {type: \"string\"}," +
-      "lastEditedBy: {type: \"string\", index: \"not_analyzed\"}," +
-      "lastEditedDate: {type: \"date\"}," +
-      "lastModifiedYearMonth: {type: \"string\"}" +
-    "}}")
+//@IndexMapping(value =
+//  "{columns: {" +
+//    "properties: {" +
+//      "question: {type: \"string\"}," +
+//      "answer: {type: \"string\"}," +
+//      "tags: {type: \"string\", index_name: \"tag\", index: \"not_analyzed\"}," +
+//      "author: {type: \"string\", index: \"not_analyzed\"}," +
+//      "createdDate: {type: \"date\"}," +
+//      "createdYearMonth: {type: \"string\", index: \"not_analyzed\"}," +
+//      "lastEditedBy: {type: \"string\", index: \"not_analyzed\"}," +
+//      "lastEditedDate: {type: \"date\"}," +
+//      "lastModifiedYearMonth: {type: \"string\", index: \"not_analyzed\"}" +
+//    "}}")
 case class Blurb(key: Option[ObjectId],
                  //id: Option[BSONObjectID],
                  question: String,
