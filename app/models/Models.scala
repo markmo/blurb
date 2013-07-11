@@ -12,7 +12,7 @@ import play.api.data.validation.Constraints._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson._
-import securesocial.core.{AuthenticationMethod, Identity, SocialUser, UserId}
+import securesocial.core._
 
 /**
  * Created by markmo on 5/07/13.
@@ -20,10 +20,15 @@ import securesocial.core.{AuthenticationMethod, Identity, SocialUser, UserId}
 @IndexMapping(value =
   "{columns: {" +
     "properties: {" +
-      "id: {type: \"string\"}," +
       "question: {type: \"string\"}," +
       "answer: {type: \"string\"}," +
-      "tags: {type: \"string\", index_name: \"tag\"}" +
+      "tags: {type: \"string\", index_name: \"tag\", index: \"not_analyzed\"}," +
+      "author: {type: \"string\", index: \"not_analyzed\"}," +
+      "createdDate: {type: \"date\"}" +
+      "createdYearMonth: {type: \"string\"}," +
+      "lastEditedBy: {type: \"string\", index: \"not_analyzed\"}," +
+      "lastEditedDate: {type: \"date\"}," +
+      "lastModifiedYearMonth: {type: \"string\"}" +
     "}}")
 case class Blurb(key: Option[ObjectId],
                  //id: Option[BSONObjectID],
@@ -110,7 +115,7 @@ object Blurb extends IndexableManager[Blurb] {
         "lastModifiedDate" -> blurb.lastModifiedDate.map(date => BSONDateTime(date.getMillis))
       )
   }
-*/
+
   implicit object userIdReads extends Reads[UserId] {
     def reads(json: JsValue) = json match {
       case jsObject: JsObject =>
@@ -134,6 +139,11 @@ object Blurb extends IndexableManager[Blurb] {
       )
   }
 
+  implicit val userIdReads: Reads[UserId] = (
+    (__ \ "id").read[String] ~
+    (__ \ "providerId").read[String]
+    )(UserId)
+
   implicit object identityReads extends Reads[Identity] {
     def reads(json: JsValue) = json match {
       case jsObject: JsObject =>
@@ -153,11 +163,48 @@ object Blurb extends IndexableManager[Blurb] {
           other.toString())
     }
   }
+*/
+
+  implicit val userIdReads = Json.reads[UserId]
+  implicit val userIdWrites = Json.writes[UserId]
+
+  implicit object authMethodReads extends Reads[AuthenticationMethod] {
+    def reads(json: JsValue) = json match {
+      case JsString(s) => JsSuccess(AuthenticationMethod(s))
+      case other =>
+        JsError("Can't parse JSON String as an AuthenticationMethod. JSON content = " +
+          other.toString())
+    }
+  }
+
+  implicit object authMethodWrites extends Writes[AuthenticationMethod] {
+    def writes(authMethod: AuthenticationMethod) = JsString(authMethod.method)
+  }
+
+  implicit val identityReads: Reads[Identity] = (
+    (__ \ "id").read[UserId] ~
+    (__ \ "firstName").read[String] ~
+    (__ \ "lastName").read[String] ~
+    (__ \ "fullName").read[String] ~
+    (__ \ "email").readNullable[String] ~
+    (__ \ "avatarUrl").readNullable[String] ~
+    (__ \ "authMethod").read[AuthenticationMethod]
+    )((id, firstName, lastName, fullName, email, avatarUrl, authMethod) =>
+      SocialUser(
+        id = id,
+        firstName = firstName,
+        lastName = lastName,
+        fullName = fullName,
+        email = email,
+        avatarUrl = avatarUrl,
+        authMethod = authMethod
+      )
+    )
 
   implicit object identityWrites extends Writes[Identity] {
     def writes(identity: Identity) =
       Json.obj(
-        "id" -> Json.toJson(identity.id),
+        "id" -> identity.id,
         "firstName" -> identity.firstName,
         "lastName" -> identity.lastName,
         "fullName" -> identity.fullName,
@@ -173,7 +220,7 @@ object Blurb extends IndexableManager[Blurb] {
         if (ObjectId.isValid(v)) JsSuccess(new ObjectId(v))
         else JsError("Invalid ObjectId")
       case other =>
-        JsError("Can't parse JSON path as a ObjectId. JSON content = " +
+        JsError("Can't parse JSON path as an ObjectId. JSON content = " +
           other.toString())
     }
   }
@@ -182,7 +229,7 @@ object Blurb extends IndexableManager[Blurb] {
     def writes(oid: ObjectId) = Json.obj("$oid" -> oid.toString)
   }
 
-  implicit object dateTimeStringReads extends Reads[DateTime] {
+  implicit object dateTimeReads extends Reads[DateTime] {
     def reads(json: JsValue) = json match {
       case jsString: JsString =>
         JsSuccess(
@@ -194,12 +241,12 @@ object Blurb extends IndexableManager[Blurb] {
     }
   }
 
-  implicit object dateTimeStringWrites extends Writes[DateTime] {
+  implicit object dateTimeWrites extends Writes[DateTime] {
     def writes(dt: DateTime) =
       JsString(dt.toString(ISODateTimeFormat.dateTime()))
   }
 
-  implicit val reads: Reads[Blurb] = (
+  implicit val blurbReads: Reads[Blurb] = (
 
     // https://groups.google.com/forum/#!topic/play-framework/njps4vDRZNo
     (__ \ "_id").readNullable[ObjectId] ~
@@ -207,22 +254,56 @@ object Blurb extends IndexableManager[Blurb] {
     (__ \ "question").read[String] ~
     (__ \ "answer").read[String] ~
     (__ \ "tags").read[Array[String]] ~
-    (__ \ "createdBy").read[Option[Identity]] ~
-    (__ \ "createdDate").read[Option[DateTime]] ~
-    (__ \ "lastModifiedBy").read[Option[Identity]] ~
-    (__ \ "lastModifiedDate").read[Option[DateTime]]
+    (__ \ "createdBy").readNullable[Identity] ~
+    (__ \ "createdDate").readNullable[DateTime] ~
+    (__ \ "lastModifiedBy").readNullable[Identity] ~
+    (__ \ "lastModifiedDate").readNullable[DateTime]
     )(Blurb.apply _)
 
-  implicit val writes: Writes[Blurb] = (
+  implicit val blurbWrites: Writes[Blurb] = (
     (__ \ "_id").writeNullable[ObjectId] ~
     (__ \ "question").write[String] ~
     (__ \ "answer").write[String] ~
     (__ \ "tags").write[Array[String]] ~
-    (__ \ "createdBy").write[Option[Identity]] ~
-    (__ \ "createdDate").write[Option[DateTime]] ~
-    (__ \ "lastModifiedBy").write[Option[Identity]] ~
-    (__ \ "lastModifiedDate").write[Option[DateTime]]
+    (__ \ "createdBy").writeNullable[Identity] ~
+    (__ \ "createdDate").writeNullable[DateTime] ~
+    (__ \ "lastModifiedBy").writeNullable[Identity] ~
+    (__ \ "lastModifiedDate").writeNullable[DateTime]
     )(unlift(Blurb.unapply))
+
+  // reads and writes are required by the IndexableManager trait and are
+  // specific to play-elasticsearch
+  // blurbReads/Writes above provide general JSON ser/de as implicit values
+
+  val reads: Reads[Blurb] = (
+    (__ \ "_id").read[String] ~
+    (__ \ "question").read[String] ~
+    (__ \ "answer").read[String] ~
+    (__ \ "tags").read[Array[String]]
+    )((id, question, answer, tags) =>
+      Blurb(
+        Some(new ObjectId(id)),
+        question,
+        answer,
+        tags,
+        None, None, None, None
+      )
+    )
+
+  val writes = new Writes[Blurb] {
+    def writes(blurb: Blurb) =
+      Json.obj(
+        "question" -> blurb.question,
+        "answer" -> blurb.answer,
+        "tags" -> blurb.tags,
+        "author" -> blurb.createdBy.map(_.fullName),
+        "createdDate" -> blurb.createdDate,
+        "createdYearMonth" -> blurb.createdDate.map(dt => dt.getYear + "-" + dt.getMonthOfYear),
+        "lastEditedBy" -> blurb.lastModifiedBy.map(_.fullName),
+        "lastModifiedDate" -> blurb.lastModifiedDate,
+        "lastModifiedYearMonth" -> blurb.lastModifiedDate.map(dt => dt.getYear + "-" + dt.getMonthOfYear)
+      )
+  }
 
   val form = Form(
     mapping(

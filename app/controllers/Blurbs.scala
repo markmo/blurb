@@ -89,20 +89,25 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
     form.bindFromRequest.fold(
       formWithErrors => BadRequest,
       boundBlurb => AsyncResult {
-        val futureResult = boundBlurb.key match {
+        //val futureResult =
+        boundBlurb.key match {
           case None => {
             // Insert
             val newBlurb = boundBlurb.copy(
+              key = Some(new ObjectId(BSONObjectID.generate.stringify)),
               createdBy = Some(user),
               createdDate = Some(DateTime.now()),
               lastModifiedBy = Some(user),
               lastModifiedDate = Some(DateTime.now())
             )
-            collection.insert(newBlurb)
+            collection.insert(newBlurb).map(_ => {
+              Blurb.index(newBlurb)
+              Application.Home
+            })
           }
           case Some(id) =>
             // Update
-            collection.find(Json.obj("_id" -> id)).one[Blurb] map { result =>
+            collection.find(Json.obj("_id" -> id)).one[Blurb] flatMap { result =>
             //collection.find(BSONDocument("_id" -> id)).one[Blurb] map { result =>
               result match {
                 case Some(oldBlurb) => {
@@ -112,16 +117,18 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
                     lastModifiedBy = Some(user),
                     lastModifiedDate = Some(DateTime.now())
                   )
-                  collection.save(newBlurb)
+                  collection.save(newBlurb).map(_ => {
+                    Blurb.index(newBlurb)
+                    Application.Home
+                  })
                 }
                 case _ => Future(NotFound)
               }
             }
         }
-        futureResult.map(result => {
-//          Blurb.index(result)
-          Application.Home
-        })
+//        futureResult.map(_ => {
+//          Application.Home
+//        })
       }
     )
   }

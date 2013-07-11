@@ -51,7 +51,11 @@
             result_display: resultTemplate,
             pushstate: false,
             facets: [
-                {field: 'tags'}
+                {field: 'tags'},
+                {field: 'author'},
+                {field: 'createdYearMonth', display: 'created year-month'},
+                {field: 'lastEditedBy', display: 'last edited by'},
+                {field: 'lastModifiedYearMonth', display: 'last edited year-month'}
             ],
             paging: {size: 10}
         });
