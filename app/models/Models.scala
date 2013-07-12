@@ -38,7 +38,8 @@ case class Blurb(key: Option[ObjectId],
                  createdBy: Option[Identity],
                  createdDate: Option[DateTime],
                  lastModifiedBy: Option[Identity],
-                 lastModifiedDate: Option[DateTime]) extends Indexable {
+                 lastModifiedDate: Option[DateTime],
+                 version: Int = 1) extends Indexable {
 
   def id = key.map(_.toString).getOrElse("")
 
@@ -257,7 +258,8 @@ object Blurb extends IndexableManager[Blurb] {
     (__ \ "createdBy").readNullable[Identity] ~
     (__ \ "createdDate").readNullable[DateTime] ~
     (__ \ "lastModifiedBy").readNullable[Identity] ~
-    (__ \ "lastModifiedDate").readNullable[DateTime]
+    (__ \ "lastModifiedDate").readNullable[DateTime] ~
+    (__ \ "version").read[Int]
     )(Blurb.apply _)
 
   implicit val blurbWrites: Writes[Blurb] = (
@@ -268,7 +270,8 @@ object Blurb extends IndexableManager[Blurb] {
     (__ \ "createdBy").writeNullable[Identity] ~
     (__ \ "createdDate").writeNullable[DateTime] ~
     (__ \ "lastModifiedBy").writeNullable[Identity] ~
-    (__ \ "lastModifiedDate").writeNullable[DateTime]
+    (__ \ "lastModifiedDate").writeNullable[DateTime] ~
+    (__ \ "version").write[Int]
     )(unlift(Blurb.unapply))
 
   // reads and writes are required by the IndexableManager trait and are
@@ -304,6 +307,10 @@ object Blurb extends IndexableManager[Blurb] {
         "lastModifiedYearMonth" -> blurb.lastModifiedDate.map(dt => dt.getYear + "-" + dt.getMonthOfYear)
       )
   }
+
+//  val historyWrites = new Writes[Blurb] {
+//    def writes(blurb: Blurb) =
+//  }
 
   val form = Form(
     mapping(

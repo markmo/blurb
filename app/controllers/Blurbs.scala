@@ -28,6 +28,8 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
 
   def collection = db[JSONCollection]("blurbs")
 
+  def history = db[JSONCollection]("history")
+
   def count: Future[Int] = db.command(Count("blurbs"))
 
   val pageSize = 10
@@ -131,6 +133,17 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
 //        })
       }
     )
+  }
+
+  def delete(id: String) = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+    Async {
+      val objectId = new ObjectId(id)
+      collection.remove(Json.obj("_id" -> objectId)).map(_ =>
+        Application.Home
+      ).recover {
+        case _ => InternalServerError
+      }
+    }
   }
 
 }

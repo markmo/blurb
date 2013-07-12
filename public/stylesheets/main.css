@@ -37,3 +37,21 @@ hr {
     margin-top: 10px;
     margin-bottom: 10px;
 }
+
+input, textarea {
+    background-color: rgb(41,41,41);
+    border-color: rgb(41,41,41);
+    color: #ddd;
+}
+
+.select2-container-multi .select2-choices,
+.select2-drop,
+.select2-dropdown-open.select2-drop-above .select2-choice,
+.select2-dropdown-open.select2-drop-above .select2-choices {
+    background: rgb(41,41,41);
+    color: #ddd;
+}
+
+.select2-container-multi .select2-choices .select2-search-field input {
+    color: #ddd;
+}
