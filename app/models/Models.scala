@@ -1,7 +1,6 @@
 package models
 
 import com.github.cleverage.elasticsearch.ScalaHelpers._
-import com.github.cleverage.elasticsearch.annotations.IndexMapping
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
@@ -17,19 +16,6 @@ import securesocial.core._
 /**
  * Created by markmo on 5/07/13.
  */
-//@IndexMapping(value =
-//  "{columns: {" +
-//    "properties: {" +
-//      "question: {type: \"string\"}," +
-//      "answer: {type: \"string\"}," +
-//      "tags: {type: \"string\", index_name: \"tag\", index: \"not_analyzed\"}," +
-//      "author: {type: \"string\", index: \"not_analyzed\"}," +
-//      "createdDate: {type: \"date\"}," +
-//      "createdYearMonth: {type: \"string\", index: \"not_analyzed\"}," +
-//      "lastEditedBy: {type: \"string\", index: \"not_analyzed\"}," +
-//      "lastEditedDate: {type: \"date\"}," +
-//      "lastModifiedYearMonth: {type: \"string\", index: \"not_analyzed\"}" +
-//    "}}")
 case class Blurb(key: Option[ObjectId],
                  //id: Option[BSONObjectID],
                  question: String,
@@ -42,129 +28,20 @@ case class Blurb(key: Option[ObjectId],
                  version: Int = 1) extends Indexable {
 
   def id = key.map(_.toString).getOrElse("")
-
 }
 
+case class BlurbChanges(question: Option[String],
+                        answer: Option[String],
+                        tags: Option[Array[String]],
+                        lastModifiedBy: Identity,
+                        lastModifiedDate: DateTime,
+                        version: Int)
+
+case class OldBlurb(id: Option[ObjectId],
+                    originalId: ObjectId,
+                    changes: BlurbChanges)
+
 object Blurb extends IndexableManager[Blurb] {
-/**
-  implicit object UserIdBSONReader extends BSONDocumentReader[UserId] {
-    def read(doc: BSONDocument): UserId =
-      UserId(
-        doc.getAs[String]("id").get,
-        doc.getAs[String]("providerId").get
-      )
-  }
-
-  implicit object UserIdBSONWriter extends BSONDocumentWriter[UserId] {
-    def write(userId: UserId): BSONDocument =
-      BSONDocument(
-        "id" -> userId.id,
-        "providerId" -> userId.providerId
-      )
-  }
-
-  implicit object IdentityBSONReader extends BSONDocumentReader[Identity] {
-    def read(doc: BSONDocument): Identity =
-      SocialUser(
-        id = doc.getAs[UserId]("id").get,
-        firstName = doc.getAs[String]("firstName").get,
-        lastName = doc.getAs[String]("lastName").get,
-        fullName = doc.getAs[String]("fullName").get,
-        email = doc.getAs[String]("email"),
-        avatarUrl = doc.getAs[String]("avatarUrl"),
-        authMethod = AuthenticationMethod(doc.getAs[String]("authMethod").get)
-      )
-  }
-
-  implicit object IdentityBSONWriter extends BSONDocumentWriter[Identity] {
-    def write(identity: Identity): BSONDocument =
-      BSONDocument(
-        "id" -> identity.id,
-        "firstName" -> identity.firstName,
-        "lastName" -> identity.lastName,
-        "fullName" -> identity.fullName,
-        "email" -> identity.email,
-        "avatarUrl" -> identity.avatarUrl,
-        "authMethod" -> identity.authMethod.method
-      )
-  }
-
-  implicit object BlurbBSONReader extends BSONDocumentReader[Blurb] {
-    def read(doc: BSONDocument): Blurb =
-      Blurb(
-        doc.getAs[BSONObjectID]("_id"),
-        doc.getAs[String]("question").get,
-        doc.getAs[String]("answer").get,
-        doc.getAs[Array[String]]("tags").get,
-        doc.getAs[Identity]("createdBy"),
-        doc.getAs[BSONDateTime]("createdDate").map(dt => new DateTime(dt.value)),
-        doc.getAs[Identity]("lastModifiedBy"),
-        doc.getAs[BSONDateTime]("lastModifiedDate").map(dt => new DateTime(dt.value))
-      )
-  }
-
-  implicit object BlurbBSONWriter extends BSONDocumentWriter[Blurb] {
-    def write(blurb: Blurb): BSONDocument =
-      BSONDocument(
-        "_id" -> blurb.key.getOrElse(BSONObjectID.generate),
-        "question" -> blurb.question,
-        "answer" -> blurb.answer,
-        "tags" -> blurb.tags,
-        "createdBy" -> blurb.createdBy,
-        "createdDate" -> blurb.createdDate.map(date => BSONDateTime(date.getMillis)),
-        "lastModifiedBy" -> blurb.lastModifiedBy,
-        "lastModifiedDate" -> blurb.lastModifiedDate.map(date => BSONDateTime(date.getMillis))
-      )
-  }
-
-  implicit object userIdReads extends Reads[UserId] {
-    def reads(json: JsValue) = json match {
-      case jsObject: JsObject =>
-        JsSuccess(
-          UserId(
-            id = (jsObject \ "id").as[String],
-            providerId = (jsObject \ "providerId").as[String]
-          )
-        )
-      case other =>
-        JsError("Can't parse JSON path as a UserId. JSON content = " +
-          other.toString())
-    }
-  }
-
-  implicit object userIdWrites extends Writes[UserId] {
-    def writes(userId: UserId) =
-      Json.obj(
-        "id" -> userId.id,
-        "providerId" -> userId.providerId
-      )
-  }
-
-  implicit val userIdReads: Reads[UserId] = (
-    (__ \ "id").read[String] ~
-    (__ \ "providerId").read[String]
-    )(UserId)
-
-  implicit object identityReads extends Reads[Identity] {
-    def reads(json: JsValue) = json match {
-      case jsObject: JsObject =>
-        JsSuccess(
-          SocialUser(
-            id = (jsObject \ "id").as[UserId],
-            firstName = (jsObject \ "firstName").as[String],
-            lastName = (jsObject \ "lastName").as[String],
-            fullName = (jsObject \ "fullName").as[String],
-            email = (jsObject \ "email").asOpt[String],
-            avatarUrl = (jsObject \ "avatarUrl").asOpt[String],
-            authMethod = AuthenticationMethod((jsObject \ "authMethod").as[String])
-          )
-        )
-      case other =>
-        JsError("Can't parse JSON path as an Identity. JSON content = " +
-          other.toString())
-    }
-  }
-*/
 
   implicit val userIdReads = Json.reads[UserId]
   implicit val userIdWrites = Json.writes[UserId]
@@ -359,14 +236,23 @@ object Blurb extends IndexableManager[Blurb] {
   )
 
   val indexType = "blurb"
+}
 
-//  def list(page: Int = 0, pageSize: Int = 10,
-//           orderBy: String = "lastModifiedDate", orderDirection: Int = -1,
-//           filter: String = "*") =
-//    Repository.pageBlurbs(page, pageSize, orderBy, orderDirection, filter)
+object BlurbChanges {
+  import models.Blurb._
 
-//  def tagOptions = Repository.getTags.map(tag => (tag, tag)).toMap
+  implicit val blurbChangesReads = Json.reads[BlurbChanges]
 
+  implicit val blurbChangesWrites = Json.writes[BlurbChanges]
+}
+
+object OldBlurb {
+  import models.Blurb._
+  import models.BlurbChanges._
+
+  implicit val oldBlurbReads = Json.reads[OldBlurb]
+
+  implicit val oldBlurbWrites = Json.writes[OldBlurb]
 }
 
 case class Page[A](items: Seq[A], page: Int, offset: Long, total: Long) {

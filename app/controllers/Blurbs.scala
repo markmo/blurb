@@ -17,7 +17,7 @@ import play.modules.reactivemongo.MongoController
 
 import scala.concurrent.Future
 
-import models.{Page, Blurb}
+import models.{BlurbChanges, OldBlurb, Page, Blurb}
 import models.Blurb._
 import service.Repository
 
@@ -91,7 +91,6 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
     form.bindFromRequest.fold(
       formWithErrors => BadRequest,
       boundBlurb => AsyncResult {
-        //val futureResult =
         boundBlurb.key match {
           case None => {
             // Insert
@@ -112,25 +111,40 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
             collection.find(Json.obj("_id" -> id)).one[Blurb] flatMap { result =>
             //collection.find(BSONDocument("_id" -> id)).one[Blurb] map { result =>
               result match {
-                case Some(oldBlurb) => {
+                case Some(current) => {
                   val newBlurb = boundBlurb.copy(
-                    createdBy = oldBlurb.createdBy,
-                    createdDate = oldBlurb.createdDate,
+                    createdBy = current.createdBy,
+                    createdDate = current.createdDate,
                     lastModifiedBy = Some(user),
-                    lastModifiedDate = Some(DateTime.now())
+                    lastModifiedDate = Some(DateTime.now()),
+                    version = current.version + 1
                   )
-                  collection.save(newBlurb).map(_ => {
+                  collection.save(newBlurb).flatMap(_ => {
+                    // determine changes (reflection?)
+                    // they're not really changes
+                    val changes = BlurbChanges(
+                      if (current.question != newBlurb.question) Some(current.question) else None,
+                      if (current.answer != newBlurb.answer) Some(current.answer) else None,
+                      if (current.tags.diff(newBlurb.tags).isEmpty) None else Some(current.tags),
+                      current.lastModifiedBy.get,
+                      current.lastModifiedDate.get,
+                      current.version
+                    )
+                    val oldBlurb = OldBlurb(
+                      Some(new ObjectId(BSONObjectID.generate.stringify)),
+                      id,
+                      changes
+                    )
                     Blurb.index(newBlurb)
-                    Application.Home
+                    history.save(oldBlurb).map(_ => {
+                      Application.Home
+                    })
                   })
                 }
                 case _ => Future(NotFound)
               }
             }
         }
-//        futureResult.map(_ => {
-//          Application.Home
-//        })
       }
     )
   }
