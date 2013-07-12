@@ -94,16 +94,19 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
         boundBlurb.key match {
           case None => {
             // Insert
-            val newBlurb = boundBlurb.copy(
-              key = Some(new ObjectId(BSONObjectID.generate.stringify)),
-              createdBy = Some(user),
-              createdDate = Some(DateTime.now()),
-              lastModifiedBy = Some(user),
-              lastModifiedDate = Some(DateTime.now())
-            )
-            collection.insert(newBlurb).map(_ => {
-              Blurb.index(newBlurb)
-              Application.Home
+            getEntities(boundBlurb.answer).flatMap(entities => {
+              val newBlurb = boundBlurb.copy(
+                key = Some(new ObjectId(BSONObjectID.generate.stringify)),
+                entities = Some(entities),
+                createdBy = Some(user),
+                createdDate = Some(DateTime.now()),
+                lastModifiedBy = Some(user),
+                lastModifiedDate = Some(DateTime.now())
+              )
+              collection.insert(newBlurb).map(_ => {
+                Blurb.index(newBlurb)
+                Application.Home
+              })
             })
           }
           case Some(id) =>

@@ -12,6 +12,9 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson._
 import securesocial.core._
+import play.api.libs.ws.WS
+import scala.concurrent.{ExecutionContext, Future}
+import ExecutionContext.Implicits.global
 
 /**
  * Created by markmo on 5/07/13.
@@ -21,6 +24,7 @@ case class Blurb(key: Option[ObjectId],
                  question: String,
                  answer: String,
                  tags: Array[String],
+                 entities: Option[Array[SemanticEntity]],
                  createdBy: Option[Identity],
                  createdDate: Option[DateTime],
                  lastModifiedBy: Option[Identity],
@@ -40,6 +44,11 @@ case class BlurbChanges(question: Option[String],
 case class OldBlurb(id: Option[ObjectId],
                     originalId: ObjectId,
                     changes: BlurbChanges)
+
+case class SemanticEntity(entityType: String,
+                          relevance: Double,
+                          count: Int,
+                          text: String)
 
 object Blurb extends IndexableManager[Blurb] {
 
@@ -124,6 +133,15 @@ object Blurb extends IndexableManager[Blurb] {
       JsString(dt.toString(ISODateTimeFormat.dateTime()))
   }
 
+  implicit val semanticEntityReads = Json.reads[SemanticEntity]
+
+  implicit val semanticEntityWrites: Writes[SemanticEntity] = (
+    (__ \ "type").write[String] ~
+    (__ \ "relevance").write[Double] ~
+    (__ \ "count").write[Int] ~
+    (__ \ "text").write[String]
+    )(unlift(SemanticEntity.unapply))
+
   implicit val blurbReads: Reads[Blurb] = (
 
     // https://groups.google.com/forum/#!topic/play-framework/njps4vDRZNo
@@ -132,6 +150,7 @@ object Blurb extends IndexableManager[Blurb] {
     (__ \ "question").read[String] ~
     (__ \ "answer").read[String] ~
     (__ \ "tags").read[Array[String]] ~
+    (__ \ "entities").readNullable[Array[SemanticEntity]] ~
     (__ \ "createdBy").readNullable[Identity] ~
     (__ \ "createdDate").readNullable[DateTime] ~
     (__ \ "lastModifiedBy").readNullable[Identity] ~
@@ -144,6 +163,7 @@ object Blurb extends IndexableManager[Blurb] {
     (__ \ "question").write[String] ~
     (__ \ "answer").write[String] ~
     (__ \ "tags").write[Array[String]] ~
+    (__ \ "entities").writeNullable[Array[SemanticEntity]] ~
     (__ \ "createdBy").writeNullable[Identity] ~
     (__ \ "createdDate").writeNullable[DateTime] ~
     (__ \ "lastModifiedBy").writeNullable[Identity] ~
@@ -159,13 +179,15 @@ object Blurb extends IndexableManager[Blurb] {
     (__ \ "_id").read[String] ~
     (__ \ "question").read[String] ~
     (__ \ "answer").read[String] ~
-    (__ \ "tags").read[Array[String]]
-    )((id, question, answer, tags) =>
+    (__ \ "tags").read[Array[String]] ~
+    (__ \ "entities").read[Array[SemanticEntity]]
+    )((id, question, answer, tags, entities) =>
       Blurb(
         Some(new ObjectId(id)),
         question,
         answer,
         tags,
+        Some(entities),
         None, None, None, None
       )
     )
@@ -176,6 +198,7 @@ object Blurb extends IndexableManager[Blurb] {
         "question" -> blurb.question,
         "answer" -> blurb.answer,
         "tags" -> blurb.tags,
+        "entities" -> blurb.entities,
         "author" -> blurb.createdBy.map(_.fullName),
         "createdDate" -> blurb.createdDate,
         "createdYearMonth" -> blurb.createdDate.map(dt => dt.getYear + "-" + dt.getMonthOfYear),
@@ -200,11 +223,12 @@ object Blurb extends IndexableManager[Blurb] {
       "tags" -> text.transform(
         (csv: String) => csv.split(','),
         (arr: Array[String]) => if (arr == null) "" else arr.mkString(",")),
+      "entities" -> optional(text),
       "createdBy" -> optional(text),
       "createdDate" -> optional(of[Long]),
       "lastModifiedBy" -> optional(text),
       "lastModifiedDate" -> optional(of[Long])
-    ) { (id, question, answer, tags,
+    ) { (id, question, answer, tags, entities,
          createdBy, createdDate,
          lastModifiedBy, lastModifiedDate) =>
       Blurb(
@@ -213,6 +237,7 @@ object Blurb extends IndexableManager[Blurb] {
         question,
         answer,
         tags,
+        None,
         createdBy.map(json => Json.parse(json).as[Identity]),
         createdDate.map(new DateTime(_)),
         lastModifiedBy.map(json => Json.parse(json).as[Identity]),
@@ -226,6 +251,7 @@ object Blurb extends IndexableManager[Blurb] {
           blurb.question,
           blurb.answer,
           blurb.tags,
+          None,
           blurb.createdBy.map(user => Json.stringify(Json.toJson(user))),
           blurb.createdDate.map(_.getMillis),
           blurb.lastModifiedBy.map(user => Json.stringify(Json.toJson(user))),
@@ -236,6 +262,17 @@ object Blurb extends IndexableManager[Blurb] {
   )
 
   val indexType = "blurb"
+
+  def getEntities(text: String): Future[Array[SemanticEntity]] = {
+    WS.url("http://access.alchemyapi.com/calls/text/TextGetRankedNamedEntities").post(Map(
+      "apikey" -> Seq("fdcd4e5268c7352c74685b472f7c02a97a27be7c"),
+      "text" -> Seq(text),
+      "outputMode" -> Seq("json")
+    )).map(result => {
+      val entities: Seq[JsValue] = result.json \ "entities" \\ "entity"
+      entities.map(_.as[SemanticEntity]).toArray
+    })
+  }
 }
 
 object BlurbChanges {
