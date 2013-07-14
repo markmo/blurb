@@ -19,6 +19,12 @@
             }
         });
         editor.load();
+        $('#btn-delete').click(function (ev) {
+            ev.preventDefault();
+            var form = document.forms[0];
+            form.action = '@routes.Blurbs.delete(blurbForm("id").value.getOrElse(""))';
+            form.submit();
+        });
     });
 </script>
 }
@@ -43,12 +49,12 @@
         @inputText(blurbForm("tags"), 'id -> "tags", '_label -> "Tags", 'placeholder -> "Type to select or enter a new tag", 'class -> "span8")
         @*multiSelect(blurbForm("tags"), options(Blurb.tagOptions), 'id -> "tags", '_label -> "Tags", 'placeholder -> "Type to select or enter a new tag", 'class -> "span5")*@
         <br>
-        @if(!isNew) {
-        <div class="pull-right">
-            <a href="@routes.Blurbs.delete(blurbForm("id").value.get)" class="btn btn-danger">Delete</a>
-        </div>
-        }
         <a href="@routes.Blurbs.index()" class="btn">Cancel</a>
         <input type="submit" class="btn btn-primary" value="@{if(isNew) "Create" else "Update"}">
+    }
+    @if(!isNew) {
+        <div class="btn-delete-container">
+            <input type="submit" id="btn-delete" name="delete" class="btn btn-danger" value="Delete">
+        </div>
     }
 }

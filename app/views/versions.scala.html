@@ -1,0 +1,55 @@
+@(history: List[(OldBlurb, List[name.fraser.neil.plaintext.diff_match_patch.Diff], List[name.fraser.neil.plaintext.diff_match_patch.Diff], List[String])],
+  user: securesocial.core.Identity)
+@import models.HumanTimeImplicits._
+
+@main("Versions", user) {
+    <h1>Versions</h1>
+    <ul class="cbp_tmtimeline">
+        @for((version, qdiff, adiff, tdiff) <- history) {
+        <li>
+            <time class="cbp_tmtime" datetime="@version.revisionDate"><span>@version.revisionDate.short</span> <span>@version.revisionDate.time</span></time>
+            <div class="cbp_tmicon cbp_tmicon-screen"></div>
+            <div class="cbp_tmlabel">
+                <div class="clearfix">
+                    <label>Question:</label>
+                    @*<div>@version.changes.question</div>*@
+                    <div>
+                    @for(diff <- qdiff) {
+                        <span class="@diff.operation.toString.toLowerCase">@diff.text</span>
+                    }
+                    </div>
+                </div>
+                <div class="clearfix">
+                    <label>Answer:</label>
+                    @*<div>@version.changes.answer</div>*@
+                    <div>
+                    @for(diff <- adiff) {
+                        <span class="@diff.operation.toString.toLowerCase">@diff.text</span>
+                    }
+                    </div>
+                </div>
+                <div class="clearfix">
+                    <label>Tags:</label>
+                    <div>
+                    @version.changes.tags.map { tag =>
+                        <span class="label">@tag</span>
+                    }
+                    @tdiff.map { tag =>
+                        <span class="label delete">@tag</span>
+                    }
+                    </div>
+                </div>
+                <div class="clearfix">
+                    <label>Last edited by:</label>
+                    <div>@version.changes.lastModifiedBy.map(_.fullName) @version.changes.lastModifiedDate.get.humanize</div>
+                    <div style="float: right;">
+                        <form action="@routes.Blurbs.restore(version.id.get.toString)" method="post">
+                            <button type="submit" class="btn btn-mini btn-info">Restore</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </li>
+        }
+    </ul>
+}

@@ -55,3 +55,100 @@ input, textarea {
 .select2-container-multi .select2-choices .select2-search-field input {
     color: #ddd;
 }
+
+.icon-copy-to-clipboard {
+    background: url(../images/clipboard_paste.png) no-repeat 0 0;
+    background-size: 16px 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    margin-right: 3px;
+}
+
+.clip-target {
+    display: none;
+    position: absolute;
+    border: 2px dashed #aaa;
+    margin-left: -10px;
+    background-color: rgba(255,255,255,.05);
+}
+
+.flash {
+    background-color: #fff;
+}
+
+.btn-delete-container {
+    position: relative;
+    left: 520px;
+    width: 100px;
+    margin-top: -50px;
+}
+
+.btn-delete-container input {
+    float: right;
+}
+
+.cbp_tmtimeline *,
+.cbp_tmtimeline *:after,
+.cbp_tmtimeline *:before {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+.cbp_tmtimeline li {
+    line-height: normal;
+}
+
+.cbp_tmlabel div label {
+    float: left;
+    width: 100px;
+    color: #333;
+    margin: 0;
+}
+
+.cbp_tmlabel > div {
+    margin-bottom: 10px;
+}
+
+.cbp_tmlabel > div:last-child {
+    margin-bottom: 0;
+}
+
+.cbp_tmlabel div div {
+    float: left;
+    font-size: 14px;
+    line-height: 20px;
+}
+
+.cbp_tmtimeline > li .cbp_tmlabel {
+    padding: 1em;
+}
+
+.cbp_tmlabel form {
+    display: inline-block;
+    margin: 0;
+}
+
+.insert {
+    color: green;
+}
+
+.delete {
+    color: #6cbfee;
+    text-decoration: line-through;
+}
+
+.label.delete {
+    color: #6cbfee;
+    background-color: #888;
+}
+
+.cbp_tmtimeline > li:nth-child(odd) .cbp_tmlabel .delete {
+    color: #3594cb;
+}
+
+.cbp_tmtimeline > li:nth-child(odd) .cbp_tmlabel .label.delete {
+    color: #6cbfee;
+    background-color: #999;
+}

@@ -42,4 +42,6 @@ object Repository {
 
   def getTags = blurbs.distinct("tags").as(classOf[String]).toList
 
+  def getEntities = blurbs.distinct("entities.type").as(classOf[String]).toList
+
 }

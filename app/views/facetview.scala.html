@@ -1,4 +1,5 @@
-@(user: securesocial.core.Identity)
+@(entities: List[String], user: securesocial.core.Identity)
+@import mojolly.inflector.InflectorImports._
 
 @scripts = {
 <script>
@@ -34,7 +35,7 @@
                     post: '"><hr>'
                 },
                 {
-                    pre: '<span>',
+                    pre: '<span class="markdown">',
                     field: 'answer',
                     post: '</span>'
                 },
@@ -55,9 +56,17 @@
                 {field: 'author'},
                 {field: 'createdYearMonth', display: 'created year-month'},
                 {field: 'lastEditedBy', display: 'last edited by'},
-                {field: 'lastModifiedYearMonth', display: 'last edited year-month'}
+                {field: 'lastModifiedYearMonth', display: 'last edited year-month'},
+                @for((entity, i) <- entities.zipWithIndex) {
+                {field: '@entity', display: '@entity.underscore.humanize.pluralize.toLowerCase'}@if(i < entities.length - 1){,}
+                }
             ],
-            paging: {size: 10}
+            paging: {size: 10},
+            post_search_callback: function () {
+                $('.markdown').each(function (i, elem) {
+                    $(elem).html(marked($(elem).text()));
+                });
+            }
         });
     });
 </script>

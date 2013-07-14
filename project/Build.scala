@@ -15,7 +15,9 @@ object ApplicationBuild extends Build {
     "com.clever-age" % "play2-elasticsearch" % "0.5.4",
     "uk.co.panaxiom" %% "play-jongo" % "0.4",
     //"com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.2.1",
-    "org.reactivemongo" %% "play2-reactivemongo" % "0.9"
+    "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
+    "io.backchat.inflector" %% "scala-inflector" % "1.3.5",
+    "org.ocpsoft.prettytime" % "prettytime" % "3.0.2.Final"
     //"com.typesafe.slick" %% "slick" % "1.0.1"
   )
 

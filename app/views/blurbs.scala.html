@@ -1,14 +1,66 @@
 @(currentPage: Page[Blurb], currentOrderBy: String, currentOrderDirection: Int, currentFilter: String, user: securesocial.core.Identity)
+@import models.HumanTimeImplicits._
 
 @link(newPage: Int, newOrderBy: Option[String] = None) = @{
   val orderDirection = if(newOrderBy == currentOrderBy) -currentOrderDirection else 1
   routes.Blurbs.index(newPage, newOrderBy.getOrElse(currentOrderBy), orderDirection, currentFilter)
 }
 
-@main("Blurbs", user) {
+@scripts = {
+<script>
+    $(function () {
+        $('.markdown').each(function (i, elem) {
+            $(elem).html(marked($(elem).text()));
+        });
+        ZeroClipboard.setDefaults({moviePath: '@routes.Assets.at("ZeroClipboard.swf")'});
+        var clipButtons = $('.btn-clip');
+        var clip = new ZeroClipboard(clipButtons);
+        $('.clip-target').each(function (i, elem) {
+            $(elem).width($(elem).next().width() + 10);
+            $(elem).height($(elem).next().height());
+        });
+        clip.on('mouseover', function () {
+            var target = $(this).data('clipboard-target');
+            $('#' + target + '-border').fadeIn('fast');
+        });
+        clip.on('mouseout', function () {
+            var target = $(this).data('clipboard-target');
+            $('#' + target + '-border').fadeOut('fast');
+        });
+        clip.on('complete', function () {
+            var target = '#' + $(this).data('clipboard-target') + '-border';
+            $(target).addClass('flash').fadeOut('fast', function () {
+                $(this).removeClass('flash');
+            });
+        });
+        //var oldName;
+        $('.label').click(function () {
+            var oldName = $(this).text();
+            $('#oldName').val(oldName);
+            $('#newName').val(oldName);
+            $('#renameTagModal').modal();
+        });
+        @*
+        $('#rename').click(function () {
+            var newName = $('#newName').val();
+            $.post({
+                url: '@routes.Blurbs.updateTag',
+                data: {
+                    oldName: oldName,
+                    newName: newName
+                }
+            }).fail(function () {
+                alert('fail');
+            });
+        })*@
+    });
+</script>
+}
+
+@main("Blurbs", user, scripts) {
     <h1>Blurbs</h1>
     <div class="add-button">
-        <a href="@routes.Blurbs.create" class="btn btn-small btn-success">
+        <a href="@routes.Blurbs.create()" class="btn btn-small btn-success">
             <i class="icon-plus icon-white"></i>
             <span>New Blurb&hellip;</span>
         </a>
@@ -21,13 +73,27 @@
                 @*<a href="@routes.Blurbs.edit(blurb.key.get.stringify)">@blurb.question</a>*@
             </dt>
             <dd>
-                <p>@blurb.answer</p>
+                <div id="answer-@blurb.id-border" class="clip-target"></div>
+                <p id="answer-@blurb.id" class="markdown">@blurb.answer</p>
+                <div class="pull-right">
+                    <button class="btn btn-mini btn-clip" data-clipboard-target="answer-@blurb.id">
+                        <i class="icon-copy-to-clipboard"></i>
+                        Copy to clipboard
+                    </button>
+                </div>
                 @if(blurb.tags != null) {
                 <p>
                     @for(tag <- blurb.tags) {
                     <span class="label">@tag</span>
                     }
                 </p>
+                }
+                <div>
+                    <span>Authored by: @blurb.createdBy.map(_.fullName) @blurb.createdDate.get.humanize</span>,
+                    <span>Last edited by: @blurb.lastModifiedBy.map(_.fullName) @blurb.lastModifiedDate.get.humanize</span>
+                </div>
+                @if(blurb.version > 1) {
+                <a href="@routes.Blurbs.versions(blurb.id)">Versions</a>
                 }
             </dd>
             }
@@ -62,4 +128,25 @@
             <em>No items found</em>
         </div>
     }
+    <form class="form-horizontal" action="@routes.Blurbs.updateTag()" method="post">
+        <div id="renameTagModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="renameTagModalLabel" aria-hidden="true">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">x</button>
+                <h3 id="renameTagModalLabel">Rename Tag</h3>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="oldName" name="oldName">
+                <div class="control-group">
+                    <label class="control-label" for="newName">Name</label>
+                    <div class="controls">
+                        <input id="newName" type="text" name="newName" placeholder="Name">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+                <button class="btn btn-primary" id="rename" type="submit">Save changes</button>
+            </div>
+        </div>
+    </form>
 }

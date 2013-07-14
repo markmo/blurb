@@ -10,11 +10,9 @@ import play.api.data.format.Formats._
 import play.api.data.validation.Constraints._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import reactivemongo.bson._
 import securesocial.core._
 import play.api.libs.ws.WS
 import scala.concurrent.{ExecutionContext, Future}
-import ExecutionContext.Implicits.global
 
 /**
  * Created by markmo on 5/07/13.
@@ -32,23 +30,34 @@ case class Blurb(key: Option[ObjectId],
                  version: Int = 1) extends Indexable {
 
   def id = key.map(_.toString).getOrElse("")
+
 }
-
-case class BlurbChanges(question: Option[String],
-                        answer: Option[String],
-                        tags: Option[Array[String]],
-                        lastModifiedBy: Identity,
-                        lastModifiedDate: DateTime,
-                        version: Int)
-
-case class OldBlurb(id: Option[ObjectId],
-                    originalId: ObjectId,
-                    changes: BlurbChanges)
 
 case class SemanticEntity(entityType: String,
                           relevance: Double,
                           count: Int,
                           text: String)
+
+//case class BlurbChanges(question: Option[String],
+//                        answer: Option[String],
+//                        tags: Option[Array[String]],
+//                        lastModifiedBy: Identity,
+//                        lastModifiedDate: DateTime,
+//                        version: Int)
+
+case class OldBlurb(id: Option[ObjectId],
+                    originalId: ObjectId,
+                    revisionDate: DateTime,
+                    changes: Blurb)
+//                    changes: BlurbChanges)
+
+case class Page[A](items: Seq[A], page: Int, offset: Long, total: Long) {
+
+  lazy val prev = Option(page - 1).filter(_ >= 0)
+
+  lazy val next = Option(page + 1).filter(_ => (offset + items.size) < total)
+
+}
 
 object Blurb extends IndexableManager[Blurb] {
 
@@ -133,7 +142,14 @@ object Blurb extends IndexableManager[Blurb] {
       JsString(dt.toString(ISODateTimeFormat.dateTime()))
   }
 
-  implicit val semanticEntityReads = Json.reads[SemanticEntity]
+  // Not sure why this isn't working
+//  implicit val semanticEntityReads = Json.reads[SemanticEntity]
+  implicit val semanticEntityReads: Reads[SemanticEntity] = (
+    (__ \ "type").read[String] ~
+    (__ \ "relevance").read[Double] ~
+    (__ \ "count").read[Int] ~
+    (__ \ "text").read[String]
+    )(SemanticEntity)
 
   implicit val semanticEntityWrites: Writes[SemanticEntity] = (
     (__ \ "type").write[String] ~
@@ -193,24 +209,38 @@ object Blurb extends IndexableManager[Blurb] {
     )
 
   val writes = new Writes[Blurb] {
-    def writes(blurb: Blurb) =
+    def writes(blurb: Blurb) = {
+      val entities = blurb.entities.map(a => {
+        a.groupBy(_.entityType).map(t => {
+          t._1 -> t._2.map(_.text)
+        })
+      }).getOrElse(Map())
+      val entitiesJson = Json.toJson(entities)
       Json.obj(
         "question" -> blurb.question,
         "answer" -> blurb.answer,
         "tags" -> blurb.tags,
-        "entities" -> blurb.entities,
         "author" -> blurb.createdBy.map(_.fullName),
         "createdDate" -> blurb.createdDate,
         "createdYearMonth" -> blurb.createdDate.map(dt => dt.getYear + "-" + dt.getMonthOfYear),
         "lastEditedBy" -> blurb.lastModifiedBy.map(_.fullName),
         "lastModifiedDate" -> blurb.lastModifiedDate,
         "lastModifiedYearMonth" -> blurb.lastModifiedDate.map(dt => dt.getYear + "-" + dt.getMonthOfYear)
-      )
+      ) ++ entitiesJson.as[JsObject]
+    }
   }
 
 //  val historyWrites = new Writes[Blurb] {
 //    def writes(blurb: Blurb) =
 //  }
+
+  //implicit val blurbChangesReads = Json.reads[BlurbChanges]
+
+  //implicit val blurbChangesWrites = Json.writes[BlurbChanges]
+
+  implicit val oldBlurbReads = Json.reads[OldBlurb]
+
+  implicit val oldBlurbWrites = Json.writes[OldBlurb]
 
   val form = Form(
     mapping(
@@ -263,39 +293,54 @@ object Blurb extends IndexableManager[Blurb] {
 
   val indexType = "blurb"
 
-  def getEntities(text: String): Future[Array[SemanticEntity]] = {
-    WS.url("http://access.alchemyapi.com/calls/text/TextGetRankedNamedEntities").post(Map(
-      "apikey" -> Seq("fdcd4e5268c7352c74685b472f7c02a97a27be7c"),
-      "text" -> Seq(text),
-      "outputMode" -> Seq("json")
-    )).map(result => {
-      val entities: Seq[JsValue] = result.json \ "entities" \\ "entity"
-      entities.map(_.as[SemanticEntity]).toArray
-    })
+  // Alchemy API
+//  def getEntities(text: String): Future[Array[SemanticEntity]] = {
+//    WS.url("http://access.alchemyapi.com/calls/text/TextGetRankedNamedEntities").post(Map(
+//      "apikey" -> Seq("fdcd4e5268c7352c74685b472f7c02a97a27be7c"),
+//      "text" -> Seq(text),
+//      "outputMode" -> Seq("json")
+//    )).map(result => {
+//      val entities: Seq[JsValue] = result.json \ "entities" \\ "entity"
+//      entities.map(_.as[SemanticEntity]).toArray
+//    })
+//  }
+
+  // Open Calais
+  def getEntities(text: String): Future[Option[Array[SemanticEntity]]] = {
+    import ExecutionContext.Implicits.global
+
+    WS.url("http://api.opencalais.com/tag/rs/enrich")
+      .withHeaders(
+        "x-calais-licenseID" -> "3ab4m8fybbsgtmxcvfm46uxu",
+        "Content-Type" -> "text/raw",
+        "Accept" -> "application/json",
+        "Cache-Control" -> "no-cache",
+        "Origin" -> "play-framework",
+        "Accept-Language" -> "en-GB,en-US;q=0.8,en;q=0.6",
+        "Host" -> "api.opencalais.com")
+      .post(text)
+      .map(response => {
+        response.status match {
+          case 200 => {
+            val entities = response.json.as[JsObject].values.map(t => {
+              t \ "_typeGroup" match {
+                case JsUndefined(_) => None
+                case JsString("entities") =>
+                  Some(SemanticEntity(
+                    (t \ "_type").as[String],
+                    (t \ "relevance").as[Double],
+                    (t \ "instances").as[JsArray].value.length,
+                    (t \ "name").as[String]
+                  ))
+                case _ => None
+              }
+            })
+            val array = entities.flatten.toArray
+            if (array.isEmpty) None
+            else Some(array)
+          }
+          case _ => None
+        }
+      })
   }
-}
-
-object BlurbChanges {
-  import models.Blurb._
-
-  implicit val blurbChangesReads = Json.reads[BlurbChanges]
-
-  implicit val blurbChangesWrites = Json.writes[BlurbChanges]
-}
-
-object OldBlurb {
-  import models.Blurb._
-  import models.BlurbChanges._
-
-  implicit val oldBlurbReads = Json.reads[OldBlurb]
-
-  implicit val oldBlurbWrites = Json.writes[OldBlurb]
-}
-
-case class Page[A](items: Seq[A], page: Int, offset: Long, total: Long) {
-
-  lazy val prev = Option(page - 1).filter(_ >= 0)
-
-  lazy val next = Option(page + 1).filter(_ => (offset + items.size) < total)
-
 }

@@ -1,6 +1,7 @@
 package controllers
 
 import play.api.mvc._
+import service.Repository
 
 object Application extends Controller with securesocial.core.SecureSocial {
 
@@ -11,7 +12,7 @@ object Application extends Controller with securesocial.core.SecureSocial {
   }
 
   def search = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
-    Ok(views.html.facetview(request.user))
+    Ok(views.html.facetview(Repository.getEntities, request.user))
   }
 
 }
