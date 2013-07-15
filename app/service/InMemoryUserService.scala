@@ -20,7 +20,6 @@ import play.api.{Logger, Application}
 import securesocial.core._
 import securesocial.core.providers.Token
 import securesocial.core.UserId
-import scala.Some
 import org.mindrot.jbcrypt.BCrypt
 
 

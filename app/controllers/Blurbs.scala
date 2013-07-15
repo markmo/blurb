@@ -1,6 +1,9 @@
 package controllers
 
 import play.api.mvc._
+import play.api.Play
+import securesocial.core.SecuredRequest
+import scala.util.matching.Regex
 
 import Application._
 import models.Blurb._
@@ -14,8 +17,26 @@ object Blurbs extends Controller with securesocial.core.SecureSocial {
 
   val pageSize = 10
 
+  def SetMongoCollectionsAction(f: SecuredRequest[AnyContent] => Result): Action[AnyContent] = {
+    SecuredAction { implicit request =>
+      val conf = Play.current.configuration
+      val user = request.user
+      val Pattern = new Regex(conf.getString("private.domain").getOrElse(".*@datascience\\.co\\.nz"))
+      user.email match {
+        case Some(Pattern(_)) =>
+          collectionName = conf.getString("private.collection").getOrElse("private_blurbs")
+          historyName = conf.getString("private.history").getOrElse("private_history")
+        case _ =>
+          collectionName = conf.getString("public.collection").getOrElse("public_blurbs")
+          historyName = conf.getString("public.history").getOrElse("public_history")
+      }
+      f(request)
+    }
+  }
+
   def index(page: Int, orderBy: String, orderDirection: Int, filter: String) =
-    SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+    //SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+    SetMongoCollectionsAction { implicit request =>
     Async {
       blurbsPage(page, orderBy, orderDirection, filter, pageSize) map { page =>
         Ok(views.html.blurbs(page, orderBy, orderDirection, filter, request.user))
@@ -27,7 +48,8 @@ object Blurbs extends Controller with securesocial.core.SecureSocial {
     }
   }
 
-  def versions(id: String) = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+  def versions(id: String) = //SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+    SetMongoCollectionsAction { implicit request =>
     Async {
       findRevisions(id) map { revisions =>
         revisions match {
@@ -42,11 +64,13 @@ object Blurbs extends Controller with securesocial.core.SecureSocial {
     }
   }
 
-  def create() = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
-    Ok(views.html.blurbForm("", form, Repository.getTags, isNew = true, request.user))
-  }
+  def create() = //SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+    SetMongoCollectionsAction { implicit request =>
+      Ok(views.html.blurbForm("", form, Repository.getTags, isNew = true, request.user))
+    }
 
-  def edit(id: String) = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+  def edit(id: String) = //SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+    SetMongoCollectionsAction { implicit request =>
     Async {
       // using for-comprehensions to compose futures
       // (see http://doc.akka.io/docs/akka/2.0.3/scala/futures.html#For_Comprehensions for more information)
@@ -62,7 +86,8 @@ object Blurbs extends Controller with securesocial.core.SecureSocial {
     }
   }
 
-  def update = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+  def update = //SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+    SetMongoCollectionsAction { implicit request =>
     form.bindFromRequest.fold(
       formWithErrors => BadRequest(
         views.html.blurbForm("", formWithErrors, Repository.getTags, isNew = false, request.user)
@@ -94,7 +119,8 @@ object Blurbs extends Controller with securesocial.core.SecureSocial {
     )
   }
 
-  def delete(id: String) = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+  def delete(id: String) = //SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+    SetMongoCollectionsAction { implicit request =>
     Async {
       deleteBlurb(id) map {_ =>
         Home.flashing("success" -> s"Blurb with id($id) has been deleted")
@@ -106,7 +132,8 @@ object Blurbs extends Controller with securesocial.core.SecureSocial {
     }
   }
 
-  def updateTag = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+  def updateTag = //SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+    SetMongoCollectionsAction { implicit request =>
     Async {
       val params = request.body.asFormUrlEncoded.get
       val oldName = params("oldName").head
@@ -121,7 +148,8 @@ object Blurbs extends Controller with securesocial.core.SecureSocial {
     }
   }
 
-  def restore(id: String) = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+  def restore(id: String) = //SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+    SetMongoCollectionsAction { implicit request =>
     Async {
       restoreRevision(id) map {_ =>
         Home.flashing("success" -> s"Successfully restored revision($id)")

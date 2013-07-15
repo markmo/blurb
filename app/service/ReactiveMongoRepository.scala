@@ -34,9 +34,13 @@ object ReactiveMongoRepository {
 
   def db = ReactiveMongoPlugin.db
 
-  def collection = db[JSONCollection]("blurbs")
+  var collectionName = "public_blurbs"
 
-  def history = db[JSONCollection]("history")
+  var historyName = "public_history"
+
+  def collection = db[JSONCollection](collectionName)
+
+  def history = db[JSONCollection](historyName)
 
   def count: Future[Int] = db.command(Count("blurbs"))
 
