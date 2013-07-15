@@ -7,6 +7,9 @@ object Application extends Controller with securesocial.core.SecureSocial {
 
   val Home = Redirect(routes.Blurbs.index())
 
+  def UhOh(message: String) =
+    Redirect(routes.Blurbs.index()).flashing("error" -> message)
+
   def index = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
     Home
   }

@@ -1109,7 +1109,7 @@ public class DiffMatchPatchX {
                     equalities.pop();  // Throw away the equality we just deleted.
                     lastequality = null;
                     if (pre_ins && pre_del) {
-                        // No changes made which could affect previous entry, keep going.
+                        // No state made which could affect previous entry, keep going.
                         post_ins = post_del = true;
                         equalities.clear();
                         safeDiff = thisDiff;
@@ -1393,7 +1393,7 @@ public class DiffMatchPatchX {
      * Compute the Levenshtein distance; the number of inserted, deleted or
      * substituted characters.
      * @param diffs LinkedList of Diff objects.
-     * @return Number of changes.
+     * @return Number of state.
      */
     public int diffLevenshtein(LinkedList<Diff> diffs) {
         int levenshtein = 0;
@@ -1930,7 +1930,7 @@ public class DiffMatchPatchX {
             return new Object[]{text, new boolean[0]};
         }
 
-        // Deep copy the patches so that no changes are made to originals.
+        // Deep copy the patches so that no state are made to originals.
         patches = patchDeepCopy(patches);
 
         String nullPadding = patchAddPadding(patches);

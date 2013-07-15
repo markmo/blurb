@@ -1,4 +1,5 @@
-@(currentPage: Page[Blurb], currentOrderBy: String, currentOrderDirection: Int, currentFilter: String, user: securesocial.core.Identity)
+@(currentPage: Page[Blurb], currentOrderBy: String, currentOrderDirection: Int,
+  currentFilter: String, user: securesocial.core.Identity)(implicit flash: Flash)
 @import models.HumanTimeImplicits._
 
 @link(newPage: Int, newOrderBy: Option[String] = None) = @{
@@ -58,6 +59,18 @@
 }
 
 @main("Blurbs", user, scripts) {
+    @flash.get("success").map { message =>
+        <div class="alert alert-success">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <div>@message</div>
+        </div>
+    }
+    @flash.get("error").map { message =>
+        <div class="alert alert-error">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <div>@message</div>
+        </div>
+    }
     <h1>Blurbs</h1>
     <div class="add-button">
         <a href="@routes.Blurbs.create()" class="btn btn-small btn-success">
@@ -93,7 +106,7 @@
                     <span>Last edited by: @blurb.lastModifiedBy.map(_.fullName) @blurb.lastModifiedDate.get.humanize</span>
                 </div>
                 @if(blurb.version > 1) {
-                <a href="@routes.Blurbs.versions(blurb.id)">Versions</a>
+                <a href="@routes.Blurbs.versions(blurb.id)">Revisions</a>
                 }
             </dd>
             }

@@ -982,7 +982,7 @@ the specific language governing permissions and limitations under the Apache Lic
         },
 
         /**
-         * Monitor the original element for changes and update select2 accordingly
+         * Monitor the original element for state and update select2 accordingly
          */
         // abstract
         monitorSource: function () {

@@ -307,7 +307,7 @@ This can define or reference a function that will be executed any time new searc
 
 pushstate
 ---------
-Updates the URL string with the current query when the user changes the search terms
+Updates the URL string with the current query when the user state the search terms
 
 linkify
 -------
@@ -322,7 +322,7 @@ default_freetext_fuzzify
 If this exists and is not false, it should be either * or ~. If it is * then * will be prepended and appended
 to each string in the freetext search term, and if it is ~ then ~ will be appended to each string in the freetext
 search term. If * or ~ or : are already in the freetext search term, it will be assumed the user is already trying
-to do a complex search term so no action will be taken. NOTE these changes are not replicated into the freetext
+to do a complex search term so no action will be taken. NOTE these state are not replicated into the freetext
 search box - the end user will not know they are happening.
 
 */

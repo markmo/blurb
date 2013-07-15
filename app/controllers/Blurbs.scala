@@ -21,6 +21,7 @@ import scala.collection.JavaConversions._
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
+import Application._
 import models._
 import models.Blurb._
 import service.Repository
@@ -42,15 +43,13 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
     SecuredAction(WithDomain("shinetech.com")) { implicit request =>
     Async {
       val offset = pageSize * page
-      val query = Json.obj("$or" -> Json.arr(
-          Json.obj("question" -> Json.obj("$regex" -> filter)),
-          Json.obj("answer" -> Json.obj("$regex" -> filter))))
-//      val query = BSONDocument(
-//        "$orderby" -> BSONDocument(orderBy -> BSONInteger(orderDirection)),
-//        "$query" -> BSONDocument("$or" -> BSONArray(
-//          BSONDocument("question" -> BSONDocument("$regex" -> BSONString(filter))),
-//          BSONDocument("answer" -> BSONDocument("$regex" -> BSONString(filter)))
-//        )))
+      val query =
+        Json.obj(
+          "$or" -> Json.arr(
+            Json.obj("question" -> Json.obj("$regex" -> filter)),
+            Json.obj("answer" -> Json.obj("$regex" -> filter))
+          )
+        )
       val cursor = collection
         .find(query)
         .sort(Json.obj(orderBy -> orderDirection))
@@ -59,12 +58,14 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
 
       cursor.toList flatMap { list =>
         count map { count =>
-          Ok(views.html.blurbs(Page(list, page, offset, count), orderBy, orderDirection, filter, request.user))
+          Ok(views.html.blurbs(
+            Page(list, page, offset, count),orderBy, orderDirection, filter, request.user)
+          )
         }
       } recover {
         case e =>
           e.printStackTrace()
-          BadRequest(e.getMessage)
+          UhOh(e.getMessage)
       }
     }
   }
@@ -77,28 +78,21 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
       val cursor = history
         .find(Json.obj("originalId" -> objectId))
         .sort(Json.obj("revisionDate" -> 1))
-        .cursor[OldBlurb]
+        .cursor[Revision]
 
-      cursor.toList flatMap { versions =>
+      cursor.toList flatMap { revisions =>
         for {
           maybe <- future
         } yield {
-          maybe map { currentBlurb =>
-//            val latest = OldBlurb(
-//              id = None,
-//              originalId = currentBlurb.key.get,
-//              revisionDate = DateTime.now(),
-//              changes = currentBlurb
-//            )
-//            val list = (versions :+ latest).sliding(2).map { w =>
-            val rest = versions.sliding(2).map { w =>
+          maybe map { latest =>
+            val rest = revisions.sliding(2).map { w =>
               w match {
-                case List(v1, v2) =>
-                  val prev = v1.changes
-                  val next = v2.changes
+                case List(r1, r2) =>
+                  val prev = r1.state
+                  val next = r2.state
                   Some(
                     (
-                      v2,
+                      r2,
                       differ.diff_main(prev.question, next.question).toList,
                       differ.diff_main(prev.answer, next.answer).toList,
                       prev.tags.toList.diff(next.tags)
@@ -107,22 +101,23 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
                 case _ => None
               }
             }
+            val head = revisions.head
             val first = (
-              versions.head,
-              List(new Diff(EQUAL, versions.head.changes.question)),
-              List(new Diff(EQUAL, versions.head.changes.answer)),
-              List()
+              head,
+              List(new Diff(EQUAL, head.state.question)),
+              List(new Diff(EQUAL, head.state.answer)),
+              Nil
             )
             val list = rest.toList.flatten.reverse :+ first
             Ok(views.html.versions(list, request.user))
           } getOrElse {
-            NotFound
+            UhOh("Could not find any revisions")
           }
         }
       } recover {
         case e =>
           e.printStackTrace()
-          BadRequest(e.getMessage)
+          UhOh(e.getMessage)
       }
     }
   }
@@ -135,8 +130,6 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
     Async {
       val objectId = new ObjectId(id)
       val future = collection.find(Json.obj("_id" -> objectId)).one[Blurb]
-      //val objectId = new BSONObjectID(id)
-      //val future = collection.find(BSONDocument("_id" -> objectId)).one[Blurb]
 
       // using for-comprehensions to compose futures
       // (see http://doc.akka.io/docs/akka/2.0.3/scala/futures.html#For_Comprehensions for more information)
@@ -146,7 +139,7 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
         maybe map { blurb =>
           Ok(views.html.blurbForm("", form.fill(blurb), Repository.getTags, isNew = false, request.user))
         } getOrElse {
-          NotFound
+          UhOh("Could not find blurb with id:" + id)
         }
       }
     }
@@ -156,13 +149,16 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
     val user = request.user
     val revisionDate = DateTime.now()
     form.bindFromRequest.fold(
-      formWithErrors => BadRequest,
-      boundBlurb => AsyncResult {
-        boundBlurb.key match {
+      formWithErrors => BadRequest(
+        views.html.blurbForm("", formWithErrors, Repository.getTags, isNew = false, request.user)
+      ),
+      bound => AsyncResult {
+        bound.key match {
+
+          // Insert
           case None => {
-            // Insert
-            getEntities(boundBlurb.answer) flatMap { entities =>
-              val newBlurb = boundBlurb.copy(
+            getEntities(bound.answer) flatMap { entities =>
+              val blurb = bound.copy(
                 key = Some(new ObjectId(BSONObjectID.generate.stringify)),
                 entities = entities,
                 createdBy = Some(user),
@@ -170,63 +166,55 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
                 lastModifiedBy = Some(user),
                 lastModifiedDate = Some(revisionDate)
               )
-              collection.insert(newBlurb) map {_ =>
-                Blurb.index(newBlurb)
-                Application.Home
+              collection.insert(blurb) map {_ =>
+                Blurb.index(blurb)
+                Home.flashing("success" -> "Successfully created new blurb")
               }
             }
           }
+
+          // Update
           case Some(id) =>
-            // Update
-            collection.find(Json.obj("_id" -> id)).one[Blurb] flatMap { result =>
-            //collection.find(BSONDocument("_id" -> id)).one[Blurb] map { result =>
-              result match {
-                case Some(current) => {
-                  val newBlurb = if (current.answer != boundBlurb.answer) {
-                    val entities = Await.result(getEntities(boundBlurb.answer), 15.seconds)
-                    boundBlurb.copy(
-                      entities = entities,
-                      createdBy = current.createdBy,
-                      createdDate = current.createdDate,
-                      lastModifiedBy = Some(user),
-                      lastModifiedDate = Some(revisionDate),
-                      version = current.version + 1
-                    )
-                  } else {
-                    boundBlurb.copy(
-                      entities = current.entities,
-                      createdBy = current.createdBy,
-                      createdDate = current.createdDate,
-                      lastModifiedBy = Some(user),
-                      lastModifiedDate = Some(revisionDate),
-                      version = current.version + 1
-                    )
-                  }
-                  collection.save(newBlurb) flatMap {_ =>
-                    // determine changes (reflection?)
-                    // they're not really changes
-//                    val changes = BlurbChanges(
-//                      if (current.question != newBlurb.question) Some(current.question) else None,
-//                      if (current.answer != newBlurb.answer) Some(current.answer) else None,
-//                      if (current.tags.diff(newBlurb.tags).isEmpty) None else Some(current.tags),
-//                      current.lastModifiedBy.get,
-//                      current.lastModifiedDate.get,
-//                      current.version
-//                    )
-                    val oldBlurb = OldBlurb(
-                      Some(new ObjectId(BSONObjectID.generate.stringify)),
-                      id,
-                      revisionDate,
-                      current
-                    )
-                    Blurb.index(newBlurb)
-                    history.save(oldBlurb) map {_ =>
-                      Application.Home
+            collection
+              .find(Json.obj("_id" -> id))
+              .one[Blurb] flatMap { maybe =>
+                maybe match {
+                  case Some(latest) => {
+                    val blurb = if (latest.answer != bound.answer) {
+                      val entities = Await.result(getEntities(bound.answer), 15.seconds)
+                      bound.copy(
+                        entities = entities,
+                        createdBy = latest.createdBy,
+                        createdDate = latest.createdDate,
+                        lastModifiedBy = Some(user),
+                        lastModifiedDate = Some(revisionDate),
+                        version = latest.version + 1
+                      )
+                    } else {
+                      bound.copy(
+                        entities = latest.entities,
+                        createdBy = latest.createdBy,
+                        createdDate = latest.createdDate,
+                        lastModifiedBy = Some(user),
+                        lastModifiedDate = Some(revisionDate),
+                        version = latest.version + 1
+                      )
+                    }
+                    collection.save(blurb) flatMap {_ =>
+                      val rev = Revision(
+                        Some(new ObjectId(BSONObjectID.generate.stringify)),
+                        id,
+                        revisionDate,
+                        latest
+                      )
+                      Blurb.index(blurb)
+                      history.save(rev) map {_ =>
+                        Home.flashing("success" -> "Successfully updated blurb")
+                      }
                     }
                   }
+                  case _ => Future(UhOh("Could not find blurb with id:" + id))
                 }
-                case _ => Future(NotFound)
-              }
             }
         }
       }
@@ -238,9 +226,11 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
       val objectId = new ObjectId(id)
       collection.remove(Json.obj("_id" -> objectId)) map {_ =>
         Blurb.delete(id)
-        Application.Home
+        Home.flashing("success" -> s"Blurb with id($id) has been deleted")
       } recover {
-        case _ => InternalServerError
+        case e =>
+          e.printStackTrace()
+          UhOh(e.getMessage)
       }
     }
   }
@@ -254,7 +244,7 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
         "$set" -> Json.obj("tags.$" -> newName)
       )
       collection.update(Json.obj("tags" -> oldName), modifier, multi = true) map {_ =>
-        Application.Home
+        Home.flashing("success" -> s"Successfully changed tag name from $oldName -> $newName")
       }
     }
   }
@@ -265,14 +255,14 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
 
       history
         .find(Json.obj("id" -> objectId))
-        .one[OldBlurb] flatMap { maybe =>
-          maybe map { oldBlurb =>
+        .one[Revision] flatMap { maybe =>
+          maybe map { rev =>
 
             collection
-              .find(Json.obj("_id" -> oldBlurb.originalId))
+              .find(Json.obj("_id" -> rev.originalId))
               .one[Blurb] flatMap { maybe =>
                 maybe map { blurb =>
-                  val v = oldBlurb.changes
+                  val v = rev.state
 
                   getEntities(v.answer) flatMap { entities =>
                     val newBlurb = blurb.copy(
@@ -283,27 +273,27 @@ object Blurbs extends Controller with securesocial.core.SecureSocial with MongoC
                       lastModifiedBy = v.lastModifiedBy,
                       lastModifiedDate = v.lastModifiedDate
                     )
-                    val newVersion = OldBlurb(
+                    val revision = Revision(
                       Some(new ObjectId(BSONObjectID.generate.stringify)),
                       blurb.key.get,
                       DateTime.now,
                       blurb
                     )
                     for {
-                      versionLastError <- history.save(newVersion)
+                      revisionLastError <- history.save(revision)
                       lastError <- collection.save(newBlurb)
                     } yield {
-                      Application.Home
+                      Home.flashing("success" -> s"Successfully restored revision($id)")
                     }
                   }
 
                 } getOrElse {
-                  Future(NotFound)
+                  Future(UhOh("Could not find blurb with id:" + rev.originalId))
                 }
             }
 
           } getOrElse {
-            Future(NotFound)
+            Future(UhOh("Could not find revision with id:" + id))
           }
       }
     }

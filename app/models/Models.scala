@@ -10,15 +10,14 @@ import play.api.data.format.Formats._
 import play.api.data.validation.Constraints._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import securesocial.core._
 import play.api.libs.ws.WS
 import scala.concurrent.{ExecutionContext, Future}
+import securesocial.core._
 
 /**
  * Created by markmo on 5/07/13.
  */
 case class Blurb(key: Option[ObjectId],
-                 //id: Option[BSONObjectID],
                  question: String,
                  answer: String,
                  tags: Array[String],
@@ -30,7 +29,6 @@ case class Blurb(key: Option[ObjectId],
                  version: Int = 1) extends Indexable {
 
   def id = key.map(_.toString).getOrElse("")
-
 }
 
 case class SemanticEntity(entityType: String,
@@ -38,18 +36,10 @@ case class SemanticEntity(entityType: String,
                           count: Int,
                           text: String)
 
-//case class BlurbChanges(question: Option[String],
-//                        answer: Option[String],
-//                        tags: Option[Array[String]],
-//                        lastModifiedBy: Identity,
-//                        lastModifiedDate: DateTime,
-//                        version: Int)
-
-case class OldBlurb(id: Option[ObjectId],
+case class Revision(id: Option[ObjectId],
                     originalId: ObjectId,
                     revisionDate: DateTime,
-                    changes: Blurb)
-//                    changes: BlurbChanges)
+                    state: Blurb)
 
 case class Page[A](items: Seq[A], page: Int, offset: Long, total: Long) {
 
@@ -142,8 +132,6 @@ object Blurb extends IndexableManager[Blurb] {
       JsString(dt.toString(ISODateTimeFormat.dateTime()))
   }
 
-  // Not sure why this isn't working
-//  implicit val semanticEntityReads = Json.reads[SemanticEntity]
   implicit val semanticEntityReads: Reads[SemanticEntity] = (
     (__ \ "type").read[String] ~
     (__ \ "relevance").read[Double] ~
@@ -159,10 +147,8 @@ object Blurb extends IndexableManager[Blurb] {
     )(unlift(SemanticEntity.unapply))
 
   implicit val blurbReads: Reads[Blurb] = (
-
     // https://groups.google.com/forum/#!topic/play-framework/njps4vDRZNo
     (__ \ "_id").readNullable[ObjectId] ~
-
     (__ \ "question").read[String] ~
     (__ \ "answer").read[String] ~
     (__ \ "tags").read[Array[String]] ~
@@ -190,7 +176,6 @@ object Blurb extends IndexableManager[Blurb] {
   // reads and writes are required by the IndexableManager trait and are
   // specific to play-elasticsearch
   // blurbReads/Writes above provide general JSON ser/de as implicit values
-
   val reads: Reads[Blurb] = (
     (__ \ "_id").read[String] ~
     (__ \ "question").read[String] ~
@@ -230,17 +215,9 @@ object Blurb extends IndexableManager[Blurb] {
     }
   }
 
-//  val historyWrites = new Writes[Blurb] {
-//    def writes(blurb: Blurb) =
-//  }
+  implicit val oldBlurbReads = Json.reads[Revision]
 
-  //implicit val blurbChangesReads = Json.reads[BlurbChanges]
-
-  //implicit val blurbChangesWrites = Json.writes[BlurbChanges]
-
-  implicit val oldBlurbReads = Json.reads[OldBlurb]
-
-  implicit val oldBlurbWrites = Json.writes[OldBlurb]
+  implicit val oldBlurbWrites = Json.writes[Revision]
 
   val form = Form(
     mapping(
@@ -263,7 +240,6 @@ object Blurb extends IndexableManager[Blurb] {
          lastModifiedBy, lastModifiedDate) =>
       Blurb(
         id.map(new ObjectId(_)),
-        //id.map(new BSONObjectID(_)),
         question,
         answer,
         tags,
@@ -277,7 +253,6 @@ object Blurb extends IndexableManager[Blurb] {
       Some(
         (
           blurb.key.map(_.toString),
-          //blurb.id.map(_.stringify),
           blurb.question,
           blurb.answer,
           blurb.tags,
@@ -322,7 +297,7 @@ object Blurb extends IndexableManager[Blurb] {
       .map(response => {
         response.status match {
           case 200 => {
-            val entities = response.json.as[JsObject].values.map(t => {
+            val entities = response.json.as[JsObject].values map { t =>
               t \ "_typeGroup" match {
                 case JsUndefined(_) => None
                 case JsString("entities") =>
@@ -334,7 +309,7 @@ object Blurb extends IndexableManager[Blurb] {
                   ))
                 case _ => None
               }
-            })
+            }
             val array = entities.flatten.toArray
             if (array.isEmpty) None
             else Some(array)

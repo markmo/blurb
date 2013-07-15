@@ -1,4 +1,4 @@
-@(history: List[(OldBlurb, List[name.fraser.neil.plaintext.diff_match_patch.Diff], List[name.fraser.neil.plaintext.diff_match_patch.Diff], List[String])],
+@(history: List[(Revision, List[name.fraser.neil.plaintext.diff_match_patch.Diff], List[name.fraser.neil.plaintext.diff_match_patch.Diff], List[String])],
   user: securesocial.core.Identity)
 @import models.HumanTimeImplicits._
 
@@ -12,7 +12,7 @@
             <div class="cbp_tmlabel">
                 <div class="clearfix">
                     <label>Question:</label>
-                    @*<div>@version.changes.question</div>*@
+                    @*<div>@version.state.question</div>*@
                     <div>
                     @for(diff <- qdiff) {
                         <span class="@diff.operation.toString.toLowerCase">@diff.text</span>
@@ -21,7 +21,7 @@
                 </div>
                 <div class="clearfix">
                     <label>Answer:</label>
-                    @*<div>@version.changes.answer</div>*@
+                    @*<div>@version.state.answer</div>*@
                     <div>
                     @for(diff <- adiff) {
                         <span class="@diff.operation.toString.toLowerCase">@diff.text</span>
@@ -31,7 +31,7 @@
                 <div class="clearfix">
                     <label>Tags:</label>
                     <div>
-                    @version.changes.tags.map { tag =>
+                    @version.state.tags.map { tag =>
                         <span class="label">@tag</span>
                     }
                     @tdiff.map { tag =>
@@ -41,7 +41,7 @@
                 </div>
                 <div class="clearfix">
                     <label>Last edited by:</label>
-                    <div>@version.changes.lastModifiedBy.map(_.fullName) @version.changes.lastModifiedDate.get.humanize</div>
+                    <div>@version.state.lastModifiedBy.map(_.fullName) @version.state.lastModifiedDate.get.humanize</div>
                     <div style="float: right;">
                         <form action="@routes.Blurbs.restore(version.id.get.toString)" method="post">
                             <button type="submit" class="btn btn-mini btn-info">Restore</button>
