@@ -3,6 +3,7 @@ package controllers
 import play.api.mvc._
 import play.api.libs.ws.WS
 import play.api.libs.Jsonp
+import play.api.Play
 import scala.concurrent.ExecutionContext.Implicits.global
 import service.ReactiveMongoRepository._
 
@@ -28,7 +29,11 @@ object Application extends Controller with securesocial.core.SecureSocial {
 
   def execSearch(callback: String, source: String) = Blurbs.SetMongoCollectionsAction { implicit request =>
     Async {
-      WS.url("http://localhost:9200/blurb/_search").withQueryString(
+      val client = Play.current.configuration.getString("elasticsearch.client").getOrElse("localhost:9200")
+      val index = Play.current.configuration.getString("elasticsearch.index.name").getOrElse("blurb")
+      val url = "http://" + client + "/" + index + "/_search"
+      //WS.url("http://localhost:9200/blurb/_search").withQueryString(
+      WS.url(url).withQueryString(
         "source" -> source
       ).get map { response =>
         Ok(Jsonp(callback, response.json))
