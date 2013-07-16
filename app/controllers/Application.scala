@@ -1,7 +1,10 @@
 package controllers
 
 import play.api.mvc._
-import service.Repository
+import play.api.libs.ws.WS
+import play.api.libs.Jsonp
+import scala.concurrent.ExecutionContext.Implicits.global
+import service.ReactiveMongoRepository._
 
 object Application extends Controller with securesocial.core.SecureSocial {
 
@@ -14,8 +17,27 @@ object Application extends Controller with securesocial.core.SecureSocial {
     Home
   }
 
-  def search = SecuredAction(WithDomain("shinetech.com")) { implicit request =>
-    Ok(views.html.facetview(Repository.getEntities, request.user))
+  def search = //SecuredAction(WithDomain("shinetech.com")) { implicit request =>
+    Blurbs.SetMongoCollectionsAction { implicit request =>
+    Async {
+      getDistinctEntityTypes map { entityTypes =>
+        Ok(views.html.facetview(entityTypes, request.user))
+      }
+    }
+  }
+
+  def execSearch(callback: String, source: String) = Blurbs.SetMongoCollectionsAction { implicit request =>
+    Async {
+      WS.url("http://localhost:9200/blurb/_search").withQueryString(
+        "source" -> source
+      ).get map { response =>
+        Ok(Jsonp(callback, response.json))
+      } recover {
+        case e =>
+          e.printStackTrace()
+          BadRequest(e.getMessage)
+      }
+    }
   }
 
 }

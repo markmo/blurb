@@ -12,9 +12,13 @@ import models.{Page, Blurb}
  */
 object Repository {
 
+  var collectionName = "public_blurbs"
+
   val db: DB = new Mongo().getDB("blurb")
+
   val jongo: Jongo = new Jongo(db)
-  val blurbs: MongoCollection = jongo.getCollection("blurbs")
+
+  def blurbs: MongoCollection = jongo.getCollection(collectionName)
 
   def getBlurbs: Iterable[Blurb] = blurbs.find().as(classOf[Blurb])
 

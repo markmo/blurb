@@ -6,6 +6,7 @@
 GET         /                              controllers.Application.index
 
 GET         /search                        controllers.Application.search
+GET         /exec-search                   controllers.Application.execSearch(callback: String, source: String)
 
 GET         /blurbs/new                    controllers.Blurbs.create
 GET         /blurbs/:id/edit               controllers.Blurbs.edit(id: String)

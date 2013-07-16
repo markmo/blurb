@@ -7,7 +7,7 @@ import scala.util.matching.Regex
 
 import Application._
 import models.Blurb._
-import service.{ReactiveMongoRepository, Repository}
+import service.ReactiveMongoRepository
 import service.ReactiveMongoRepository._
 
 /**
@@ -22,12 +22,14 @@ object Blurbs extends Controller with securesocial.core.SecureSocial {
       val conf = Play.current.configuration
       val user = request.user
       val Pattern = new Regex(conf.getString("private.domain").getOrElse(".*@datascience\\.co\\.nz"))
+      val privateCollectionName = conf.getString("private.collection").getOrElse("private_blurbs")
+      val publicCollectionName = conf.getString("public.collection").getOrElse("public_blurbs")
       user.email match {
         case Some(Pattern(_)) =>
-          collectionName = conf.getString("private.collection").getOrElse("private_blurbs")
+          collectionName = privateCollectionName
           historyName = conf.getString("private.history").getOrElse("private_history")
         case _ =>
-          collectionName = conf.getString("public.collection").getOrElse("public_blurbs")
+          collectionName = publicCollectionName
           historyName = conf.getString("public.history").getOrElse("public_history")
       }
       f(request)
@@ -66,7 +68,15 @@ object Blurbs extends Controller with securesocial.core.SecureSocial {
 
   def create() = //SecuredAction(WithDomain("shinetech.com")) { implicit request =>
     SetMongoCollectionsAction { implicit request =>
-      Ok(views.html.blurbForm("", form, Repository.getTags, isNew = true, request.user))
+      Async {
+        getDistinctTags map { tags =>
+          Ok(views.html.blurbForm("", form, tags, isNew = true, request.user))
+        } recover {
+          case e =>
+            e.printStackTrace()
+            UhOh(e.getMessage)
+        }
+      }
     }
 
   def edit(id: String) = //SecuredAction(WithDomain("shinetech.com")) { implicit request =>
@@ -76,9 +86,10 @@ object Blurbs extends Controller with securesocial.core.SecureSocial {
       // (see http://doc.akka.io/docs/akka/2.0.3/scala/futures.html#For_Comprehensions for more information)
       for {
         maybe <- getBlurb(id)
+        tags <- getDistinctTags
       } yield {
         maybe map { blurb =>
-          Ok(views.html.blurbForm("", form.fill(blurb), Repository.getTags, isNew = false, request.user))
+          Ok(views.html.blurbForm("", form.fill(blurb), tags, isNew = false, request.user))
         } getOrElse {
           UhOh("Could not find blurb with id:" + id)
         }
@@ -89,9 +100,15 @@ object Blurbs extends Controller with securesocial.core.SecureSocial {
   def update = //SecuredAction(WithDomain("shinetech.com")) { implicit request =>
     SetMongoCollectionsAction { implicit request =>
     form.bindFromRequest.fold(
-      formWithErrors => BadRequest(
-        views.html.blurbForm("", formWithErrors, Repository.getTags, isNew = false, request.user)
-      ),
+      formWithErrors => AsyncResult {
+        getDistinctTags map { tags => BadRequest(
+          views.html.blurbForm("", formWithErrors, tags, isNew = false, request.user))
+        } recover {
+          case e =>
+            e.printStackTrace()
+            UhOh(e.getMessage)
+        }
+      },
       bound => AsyncResult {
         bound.key match {
 

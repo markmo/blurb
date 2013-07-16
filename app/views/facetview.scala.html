@@ -47,10 +47,10 @@
             ]
         ];
         $('.facet-view-simple').facetview({
-            search_url: 'http://localhost:9200/blurb/_search?',
+            search_url: '/exec-search',
             search_index: 'blurb',
             result_display: resultTemplate,
-            pushstate: false,
+            pushstate: true,
             facets: [
                 {field: 'tags'},
                 {field: 'author'},

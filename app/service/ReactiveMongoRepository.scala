@@ -5,18 +5,19 @@ import name.fraser.neil.plaintext.diff_match_patch.Diff
 import name.fraser.neil.plaintext.diff_match_patch.Operation._
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
-import play.api.libs.json.Json
+import play.api.libs.json.Json._
 import play.api.Play.current
 import securesocial.core.Identity
 
 // Reactive Mongo plugin, including the JSON-specialized collection
+import play.modules.reactivemongo.json.BSONFormats._
 import play.modules.reactivemongo.json.collection.JSONCollection
 import play.modules.reactivemongo.ReactiveMongoPlugin
 
 // Reactive Mongo imports
 import reactivemongo.api.QueryOpts
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.core.commands.Count
+import reactivemongo.bson.{BSONObjectID, BSONDocument}
+import reactivemongo.core.commands.{Unwind, Project, Aggregate, Count}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.{Await, Future, ExecutionContext}
@@ -42,7 +43,7 @@ object ReactiveMongoRepository {
 
   def history = db[JSONCollection](historyName)
 
-  def count: Future[Int] = db.command(Count("blurbs"))
+  def count: Future[Int] = db.command(Count(collectionName))
 
   val pageSize = 10
 
@@ -51,15 +52,15 @@ object ReactiveMongoRepository {
                  pageSize: Int = pageSize) = {
     val offset = pageSize * page
     val query =
-      Json.obj(
-        "$or" -> Json.arr(
-          Json.obj("question" -> Json.obj("$regex" -> filter)),
-          Json.obj("answer" -> Json.obj("$regex" -> filter))
+      obj(
+        "$or" -> arr(
+          obj("question" -> obj("$regex" -> filter)),
+          obj("answer" -> obj("$regex" -> filter))
         )
       )
     val cursor = collection
       .find(query)
-      .sort(Json.obj(orderBy -> orderDirection))
+      .sort(obj(orderBy -> orderDirection))
       .options(QueryOpts(skipN = offset, batchSizeN = pageSize))
       .cursor[Blurb]
 
@@ -73,10 +74,10 @@ object ReactiveMongoRepository {
   def findRevisions(id: String) = {
     val objectId = new ObjectId(id)
     val differ = new diff_match_patch()
-    val future = collection.find(Json.obj("_id" -> objectId)).one[Blurb]
+    val future = collection.find(obj("_id" -> objectId)).one[Blurb]
     val cursor = history
-      .find(Json.obj("originalId" -> objectId))
-      .sort(Json.obj("revisionDate" -> 1))
+      .find(obj("originalId" -> objectId))
+      .sort(obj("revisionDate" -> 1))
       .cursor[Revision]
 
     cursor.toList flatMap { revisions =>
@@ -115,7 +116,7 @@ object ReactiveMongoRepository {
 
   def getBlurb(id: String) = {
     val objectId = new ObjectId(id)
-    collection.find(Json.obj("_id" -> objectId)).one[Blurb]
+    collection.find(obj("_id" -> objectId)).one[Blurb]
   }
 
   def insertBlurb(bound: Blurb, user: Identity) = {
@@ -136,7 +137,7 @@ object ReactiveMongoRepository {
 
   def updateBlurb(bound: Blurb, user: Identity) = {
     val revisionDate = DateTime.now()
-    collection.find(Json.obj("_id" -> bound.key)).one[Blurb] flatMap { maybe =>
+    collection.find(obj("_id" -> bound.key)).one[Blurb] flatMap { maybe =>
       maybe map { latest =>
         val blurb = if (latest.answer != bound.answer) {
           val entities = Await.result(getEntities(bound.answer), 15.seconds)
@@ -176,25 +177,25 @@ object ReactiveMongoRepository {
 
   def deleteBlurb(id: String) = {
     val objectId = new ObjectId(id)
-    collection.remove(Json.obj("_id" -> objectId)) map {_ =>
+    collection.remove(obj("_id" -> objectId)) map {_ =>
       Blurb.delete(id)
     }
   }
 
   def updateTag(oldName: String, newName: String) = {
-    val modifier = Json.obj(
-      "$set" -> Json.obj("tags.$" -> newName)
+    val modifier = obj(
+      "$set" -> obj("tags.$" -> newName)
     )
-    collection.update(Json.obj("tags" -> oldName), modifier, multi = true)
+    collection.update(obj("tags" -> oldName), modifier, multi = true)
   }
 
   def restoreRevision(id: String) = {
     val objectId = new ObjectId(id)
 
-    history.find(Json.obj("id" -> objectId)).one[Revision] flatMap { maybe =>
+    history.find(obj("id" -> objectId)).one[Revision] flatMap { maybe =>
       maybe map { rev =>
 
-        collection.find(Json.obj("_id" -> rev.originalId)).one[Blurb] flatMap { maybe =>
+        collection.find(obj("_id" -> rev.originalId)).one[Blurb] flatMap { maybe =>
           maybe map { blurb =>
             val v = rev.state
 
@@ -229,6 +230,32 @@ object ReactiveMongoRepository {
       } getOrElse {
         Future.failed(new Exception("Could not find revision with id:" + id))
       }
+    }
+  }
+
+  def getDistinctTags: Future[List[String]] = {
+    val cmd = Aggregate(collectionName, Seq(
+      Project("tags" -> 1),
+      Unwind("tags")
+    ))
+    val future: Future[Stream[BSONDocument]] = db.command(cmd)
+    future map { result =>
+      result.toList.map(doc =>
+        (toJson(doc) \ "tags").asOpt[String]
+      ).flatten.distinct
+    }
+  }
+
+  def getDistinctEntityTypes: Future[List[String]] = {
+    val cmd = Aggregate(collectionName, Seq(
+      Project("entities.type" -> 1),
+      Unwind("entities")
+    ))
+    val future: Future[Stream[BSONDocument]] = db.command(cmd)
+    future map { result =>
+      result.toList.map(doc =>
+        (toJson(doc) \ "entities" \ "type").asOpt[String]
+      ).flatten.distinct
     }
   }
 }
