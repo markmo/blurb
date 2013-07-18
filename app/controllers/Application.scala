@@ -30,7 +30,8 @@ object Application extends Controller with securesocial.core.SecureSocial {
   def execSearch(callback: String, source: String) = Blurbs.SetMongoCollectionsAction { implicit request =>
     Async {
       //val client = Play.current.configuration.getString("elasticsearch.client").getOrElse("localhost:9200")
-      val client = "ec2-54-252-198-226.ap-southeast-2.compute.amazonaws.com:9200"
+      //val client = "ec2-54-252-198-226.ap-southeast-2.compute.amazonaws.com:9200"
+      val client = "fqfxuqfj.api.qbox.io:80"
       val index = Play.current.configuration.getString("elasticsearch.index.name").getOrElse("blurb")
       val url = "http://" + client + "/" + index + "/_search"
       //WS.url("http://localhost:9200/blurb/_search").withQueryString(

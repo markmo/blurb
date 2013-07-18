@@ -1,0 +1,6 @@
+curl -X PUT http://fqfxuqfj.api.qbox.io/blurb -d '{"number_of_shards" : 1, "number_of_replicas" : 0}'
+
+# Check existence of index
+curl -I http://fqfxuqfj.api.qbox.io/blurb
+
+curl -X PUT http://ompplplwcokiauzq.api.qbox.io/blurb/blurb/_mapping?pretty=true -d '{ "blurb": { "properties": { "question": { "type": "string" }, "answer": { "type": "string" }, "tags": { "type": "string", "index_name": "tag", "index": "not_analyzed" }, "author": { "type": "string", "index": "not_analyzed" }, "createdDate": { "type": "string" }, "createdYearMonth": { "type": "string", "index": "not_analyzed" }, "lastEditedBy": { "type": "string", "index": "not_analyzed" }, "lastEditedDate": { "type": "string" }, "lastModifiedYearMonth": { "type": "string", "index": "not_analyzed" }, "IndustryTerm": { "type": "string", "index_name": "IndustryTerm", "index": "not_analyzed" }, "Company": { "type": "string", "index_name": "Company", "index": "not_analyzed" }, "Country": { "type": "string", "index_name": "Country", "index": "not_analyzed" }, "Holiday": { "type": "string", "index_name": "Holiday", "index": "not_analyzed" } } } }'
